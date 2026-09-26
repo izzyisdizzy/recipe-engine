@@ -16,8 +16,10 @@ package instead of externalizing it.
 ### Layout
 
 - `src/schema.ts` — `recipeSchema`, `categoryValues`, `RecipeEntry`/`RecipeData` types.
-- `src/*.ts` — pure logic: `units`, `ingredients`, `markdown`, `ingredient-suggest`, plus
-  `ingredient-popover` (client, but emits no Tailwind classes).
+- `src/*.ts` — pure logic: `units`, `ingredients`, `markdown`, `ingredient-suggest`, plus the
+  client scripts `ingredient-typeahead` (takes the density table as a parameter) and
+  `ingredient-popover` (both client-side, but they emit only hand-written `.ing-*` classes —
+  never Tailwind utilities, since `src/` root is not scanned).
 - `src/client/` — client scripts that toggle **Tailwind utility classes**
   (`recipe-units`, `recipe-amounts`).
 - `src/components/` — `Recipe.astro`, `RecipeCard.astro`, `UnitsToggle.astro`.

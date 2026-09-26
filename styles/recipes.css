@@ -153,3 +153,92 @@
     color: #a3a3a3; /* neutral-400 */
   }
 }
+
+/* Ingredient-name typeahead (src/ingredient-typeahead.ts), used on izzybennett.com's /upload.
+   The options are built by that script, so — like the .ing-pop rules above — these live here
+   instead of as utility classes. The consuming page supplies the markup the script drives: a
+   [data-typeahead] wrapper holding the name input, a [data-ta-ghost] span and a
+   [data-ta-list] listbox. Both overlays are position:absolute inside that wrapper, so neither
+   disturbs the row's layout. */
+.ing-ta-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  max-height: 14rem;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0.25rem 0;
+  list-style: none;
+  border: 1px solid #d4d4d4; /* neutral-300 */
+  border-radius: 0.5rem;
+  background: #fff;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.1);
+  font-size: 0.875rem;
+}
+
+.ing-ta-opt {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.375rem 0.75rem;
+  cursor: pointer;
+}
+
+.ing-ta-opt:hover,
+.ing-ta-opt[aria-selected="true"] {
+  background: var(--color-accent-50);
+}
+
+.ing-ta-grams {
+  flex: none;
+  color: #737373; /* neutral-500 */
+  font-variant-numeric: tabular-nums;
+}
+
+/* The inline completion. It sits over the input with pointer-events:none, so the input keeps
+   its own background, border, focus ring and caret; only the untyped remainder is painted.
+   The padding and border here MUST stay in step with `itemInput` in izzybennett.com's
+   src/pages/upload.astro (px-3 py-2 + a 1px border) — a cross-repo coupling: inset:0 spans
+   the border box, so any mismatch shifts the ghost text out of line with what's been typed. */
+.ing-ta-ghost {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid transparent;
+  overflow: hidden;
+  white-space: pre;
+  pointer-events: none;
+  font: inherit;
+  color: #a3a3a3; /* neutral-400, matching the field's own placeholder */
+}
+
+/* Reserves the exact width of the typed text without painting it, so the remainder starts
+   at the caret. No measurement needed: the browser lays it out in the input's own font. */
+.ing-ta-ghost > [data-ta-typed] {
+  visibility: hidden;
+}
+
+@media (prefers-color-scheme: dark) {
+  .ing-ta-list {
+    border-color: #404040; /* neutral-700 */
+    background: #262626; /* neutral-800 */
+    color: #e5e5e5; /* neutral-200 */
+    box-shadow: 0 4px 12px rgb(0 0 0 / 0.4);
+  }
+  .ing-ta-opt:hover,
+  .ing-ta-opt[aria-selected="true"] {
+    background: #404040; /* neutral-700 */
+  }
+  .ing-ta-grams {
+    color: #a3a3a3; /* neutral-400 */
+  }
+  .ing-ta-ghost {
+    color: #737373; /* neutral-500, subordinate to the neutral-100 text it trails */
+  }
+}
