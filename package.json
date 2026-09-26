@@ -1,0 +1,40 @@
+{
+  "name": "@izzy/recipe-engine",
+  "version": "1.0.0",
+  "description": "Recipe logic for Astro sites: content schema, US-to-grams conversion, ingredient/step linking, and ingredient popovers.",
+  "type": "module",
+  "repository": "github:izzyisdizzy/recipe-engine",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "files": [
+    "src",
+    "!src/**/*.test.ts",
+    "seed"
+  ],
+  "exports": {
+    "./schema": "./src/schema.ts",
+    "./units": "./src/units.ts",
+    "./ingredients": "./src/ingredients.ts",
+    "./markdown": "./src/markdown.ts",
+    "./ingredient-suggest": "./src/ingredient-suggest.ts",
+    "./ingredient-popover": "./src/ingredient-popover.ts",
+    "./seed/densities.json": "./seed/densities.json"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "astro": "^7.2.8"
+  },
+  "dependencies": {
+    "marked": "^18.0.7"
+  },
+  "devDependencies": {
+    "astro": "^7.2.8",
+    "happy-dom": "^20.11.2",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.0"
+  }
+}
