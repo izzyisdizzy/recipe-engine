@@ -1,0 +1,155 @@
+/*
+ * @izzy/recipe-engine styles. Import this from the site's Tailwind entry stylesheet, after
+ * `@import "tailwindcss"`:
+ *
+ *   @import "@izzy/recipe-engine/styles/recipes.css";
+ *
+ * Tailwind never scans node_modules, so the @source lines below register this package's
+ * utility-class users with the consuming site's build. The paths resolve relative to this
+ * file. Every file that uses Tailwind classes must live under one of these two directories:
+ * without it, those classes silently vanish from the site's CSS.
+ *
+ * They are directories on purpose. A file or glob @source ends up scanning the file's whole
+ * directory, which would pull in src/*.ts and harvest class-shaped words from comments
+ * ("shadow", "invert") as dead CSS. So src/ root stays unscanned: code there must emit only
+ * the hand-written .ing-* classes below, never Tailwind utilities.
+ *
+ * Colors come from the site's `--color-accent-*` theme tokens. Sites that don't define them
+ * can also import `@izzy/recipe-engine/styles/theme.css` for a default palette.
+ */
+@source "../src/components";
+@source "../src/client";
+
+/* Ingredient-measurement popovers in recipe steps. Triggers + panels are injected into the
+   step HTML at build time (src/ingredients.ts), so these styles are global rather than in
+   Recipe.astro's scoped <style>, which wouldn't reach set:html content. The panel is
+   position:absolute → no layout shift; it reveals on hover, keyboard focus, or the [data-open]
+   set by the tap-toggle script (src/ingredient-popover.ts). */
+.ing-ref {
+  position: relative;
+  display: inline;
+}
+
+.ing-ref-btn {
+  font: inherit;
+  font-weight: 600; /* all matched ingredients read bold in the steps */
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: help;
+  border-bottom: 1px dashed var(--color-accent-600);
+}
+
+.ing-ref-btn:hover,
+.ing-ref-btn:focus-visible {
+  color: var(--color-accent-700);
+}
+
+.ing-pop {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  display: none;
+  min-width: max-content;
+  max-width: 16rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e5e5; /* neutral-200 */
+  background: #ffffff;
+  color: #404040; /* neutral-700 */
+  font-size: 0.75rem;
+  line-height: 1.1rem;
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.1);
+  cursor: default;
+}
+
+.ing-ref:hover > .ing-pop,
+.ing-ref:focus-within > .ing-pop,
+.ing-ref[data-open] > .ing-pop {
+  display: block;
+}
+
+/* One row per group when an ingredient is measured in more than one place. */
+.ing-pop-row {
+  display: block;
+}
+
+/* US ↔ grams inside any generated amount — the popover panel and the inline copy alike —
+   driven by the same toggle as the ingredient list (which sets data-units on <html>).
+   Scoped to `.ing-amt`, a class only src/ingredients.ts emits, so it never touches the
+   ingredient list, which has its own (component-scoped) us/grams rules. Grams text is
+   hidden until grams mode; in grams mode the US text hides only on convertible amounts, so
+   count/unknown items keep showing US. Before the toggle script runs, no data-units is set
+   → the default US view. */
+.ing-amt .ing-grams {
+  display: none;
+}
+:root[data-units='grams'] .ing-amt.ing-conv .ing-us {
+  display: none;
+}
+:root[data-units='grams'] .ing-amt.ing-conv .ing-grams {
+  display: inline;
+}
+
+/* Inline amounts mode. A mention that resolved to exactly one measurement, is the first of
+   its ingredient, and isn't already quantified in the prose bakes a second copy of its
+   amount before the name (`.ing-inline`). It ships hidden, so the default — and the no-JS —
+   page is exactly the popover-only one. The "Show amounts" button stamps
+   <html data-amounts="inline">, which swaps that copy in and suppresses only that mention's
+   popover and hover affordance; every other mention keeps the popover in both modes.
+
+   These rules are (0,4,0) — :root + the attribute + two classes — so they beat the
+   reveal rules below at (0,3,0) regardless of source order, and the :hover/:focus-visible
+   pair is (0,5,0) against `.ing-ref-btn:hover` at (0,2,0). `border-bottom-style` is a
+   longhand, so it is orthogonal to the dark-mode block's `border-bottom-color`. */
+.ing-inline {
+  display: none;
+}
+.ing-inline .ing-amt {
+  white-space: nowrap; /* never break "½ cup" across lines */
+}
+
+:root[data-amounts='inline'] .ing-has-amt > .ing-inline {
+  display: inline;
+}
+:root[data-amounts='inline'] .ing-has-amt > .ing-pop {
+  display: none;
+}
+:root[data-amounts='inline'] .ing-has-amt > .ing-ref-btn {
+  cursor: inherit;
+  border-bottom-style: none;
+}
+:root[data-amounts='inline'] .ing-has-amt > .ing-ref-btn:hover,
+:root[data-amounts='inline'] .ing-has-amt > .ing-ref-btn:focus-visible {
+  color: inherit;
+}
+
+.ing-pop-group {
+  color: #737373; /* neutral-500 */
+  font-weight: 400;
+}
+
+@media (prefers-color-scheme: dark) {
+  .ing-ref-btn {
+    border-bottom-color: var(--color-accent-100);
+  }
+  .ing-ref-btn:hover,
+  .ing-ref-btn:focus-visible {
+    color: var(--color-accent-100);
+  }
+  .ing-pop {
+    border-color: #404040; /* neutral-700 */
+    background: #262626; /* neutral-800 */
+    color: #e5e5e5; /* neutral-200 */
+    box-shadow: 0 4px 12px rgb(0 0 0 / 0.4);
+  }
+  .ing-pop-group {
+    color: #a3a3a3; /* neutral-400 */
+  }
+}

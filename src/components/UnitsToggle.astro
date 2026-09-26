@@ -1,0 +1,26 @@
+---
+/**
+ * The US ↔ Grams segmented control. A recipe page renders it twice — once in the
+ * Ingredients header, once in the Steps header — but the two are one control: Recipe.astro's
+ * script drives every `[data-units-btn]` on the page from a single apply(), so clicking
+ * either updates both and both reflect the stored mode on load.
+ *
+ * Deliberately carries no `id` (instances are found via `[data-units-toggle]`), since two
+ * renderings of the same markup would otherwise duplicate it.
+ */
+interface Props {
+  label?: string;
+}
+
+const { label = 'Ingredient units' } = Astro.props;
+---
+
+<div
+  data-units-toggle
+  class="inline-flex rounded-lg border border-neutral-200 p-0.5 text-xs font-medium dark:border-neutral-800"
+  role="group"
+  aria-label={label}
+>
+  <button type="button" data-units-btn="us" class="rounded-md px-2.5 py-1 text-neutral-500 dark:text-neutral-400">US</button>
+  <button type="button" data-units-btn="grams" class="rounded-md px-2.5 py-1 text-neutral-500 dark:text-neutral-400">Grams</button>
+</div>

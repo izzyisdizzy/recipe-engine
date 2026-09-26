@@ -50,3 +50,17 @@ export const recipeSchema = ({ image }: SchemaContext) =>
     image: image().optional(),
     draft: z.boolean().default(false),
   });
+
+/** A recipe's validated frontmatter, as Astro hands it to pages. */
+export type RecipeData = z.output<ReturnType<typeof recipeSchema>>;
+
+/**
+ * The slice of a content-collection entry the components need. Structural on purpose:
+ * `CollectionEntry<'recipes'>` is generated into the consuming site's `.astro/` types and
+ * can't be named from a package, but it is assignable to this because both derive from
+ * `recipeSchema`.
+ */
+export interface RecipeEntry {
+  id: string;
+  data: RecipeData;
+}

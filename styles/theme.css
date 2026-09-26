@@ -1,0 +1,13 @@
+/*
+ * Optional default palette for sites that don't define their own `--color-accent-*` tokens.
+ * The recipe components and recipes.css use accent-50/100/600/700; without them, popover
+ * underlines and step-number badges render uncolored. Import after tailwindcss:
+ *
+ *   @import "@izzy/recipe-engine/styles/theme.css";
+ */
+@theme {
+  --color-accent-50: #fdf2f8;
+  --color-accent-100: #fce7f3;
+  --color-accent-600: #db2777;
+  --color-accent-700: #be185d;
+}
