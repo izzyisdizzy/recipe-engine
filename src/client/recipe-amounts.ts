@@ -17,8 +17,6 @@
  */
 export const AMOUNTS_KEY = 'izzy-recipe-amounts';
 
-const ACTIVE_CLS = ['bg-accent-50', 'text-accent-700', 'dark:bg-neutral-800', 'dark:text-accent-100'];
-const INACTIVE_CLS = ['text-neutral-500', 'dark:text-neutral-400'];
 
 /** Apply (or undo) inline-amounts mode across the page. Idempotent. */
 export function applyInlineAmounts(on: boolean): void {
@@ -56,14 +54,12 @@ export function initAmountsToggle(btn: HTMLElement | null = document.getElementB
   const apply = (on: boolean) => {
     applyInlineAmounts(on);
     btn.textContent = on ? 'Hide amounts' : 'Show amounts';
-    btn.setAttribute('aria-pressed', String(on));
-    INACTIVE_CLS.forEach((c) => btn.classList.toggle(c, !on));
-    ACTIVE_CLS.forEach((c) => btn.classList.toggle(c, on));
+    btn.setAttribute('aria-pressed', String(on)); // the pressed look is CSS keyed on this
   };
 
   let stored: string | null = null;
   try { stored = localStorage.getItem(AMOUNTS_KEY); } catch { /* private mode — just default */ }
-  apply(stored === 'inline'); // label and styling come from storage, never the static markup
+  apply(stored === 'inline'); // label and pressed state come from storage, never the static markup
 
   btn.addEventListener('click', () => {
     const on = btn.getAttribute('aria-pressed') !== 'true';

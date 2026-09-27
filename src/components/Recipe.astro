@@ -4,14 +4,14 @@
  * (popovers + "Show amounts"), and notes — as a bare <article>. It deliberately does not wrap
  * itself in a page layout; the consuming site supplies its own shell around it.
  *
- * Needs `@izzy/recipe-engine/styles/recipes.css` imported into the site's Tailwind entry
- * stylesheet (it styles the step HTML and registers this package with Tailwind's scanner).
+ * Styled by Dizzy: the site must load Dizzy's tokens and `bundle.css` (the `dz-*` classes), and
+ * import `@izzy/recipe-engine/styles/recipes.css` into its Tailwind entry stylesheet (the
+ * `.rx-*` / `.ing-*` rules, and the @source registration for this package).
  */
 import UnitsToggle from './UnitsToggle.astro';
 import type { RecipeEntry } from '../schema';
-import { inlineMarkdown } from '../markdown';
-import { toGrams, formatGrams, ingredientLabel, withDetail, type Densities } from '../units';
-import { buildIngredientIndex, createLinkState, linkIngredientsInHtml } from '../ingredients';
+import { toGrams, formatGrams, withDetail, type Densities } from '../units';
+import { buildIngredientIndex, createLinkState, linkStep, type StructuredItem } from '../ingredients';
 
 interface Props {
   recipe: RecipeEntry;
@@ -25,21 +25,33 @@ interface Props {
 }
 
 const { recipe, densities, editHref } = Astro.props;
-const { title, category, prepTime, cookTime, servings, tools, ingredients, steps, notes } = recipe.data;
+const { title, description, category, prepTime, cookTime, servings, tools, ingredients, steps, notes } = recipe.data;
+const recipeYield = recipe.data.yield;
+const oven = recipe.data.oven;
 
-const hasMeta = prepTime !== undefined || cookTime !== undefined || servings !== undefined;
+const meta = [
+  recipeYield && { label: 'Yield', value: recipeYield },
+  servings !== undefined && { label: 'Serves', value: String(servings) },
+  prepTime !== undefined && { label: 'Prep', value: `${prepTime} min` },
+  cookTime !== undefined && { label: 'Cook', value: `${cookTime} min` },
+  oven && { label: 'Oven', value: oven },
+].filter((m): m is { label: string; value: string } => Boolean(m));
 
-// Precompute each ingredient's US label and, where the ingredient's grams-per-cup ratio is
-// known (or the unit is already a weight), its grams label. Items that can't be converted
-// (no/unknown unit or density) have grams === null and always show the US text.
+// An item's grams: its explicit override if it has one, else the density-table conversion.
+const gramsOf = (item: StructuredItem): number | null =>
+  item.grams ?? toGrams(item.qty, item.unit, item.name, densities);
+
+// Precompute each ingredient's amount (US and, where convertible, grams) separately from its
+// name, so the amount can be set in mono. Items that can't be converted have grams === null
+// and always show the US text.
 const ingredientGroups = ingredients.map((group) => ({
   group: group.group,
   items: group.items.map((item) => {
-    const us = ingredientLabel(item);
-    const grams = toGrams(item.qty, item.unit, item.name, densities);
+    const grams = gramsOf(item);
     return {
-      us,
-      grams: grams === null ? null : withDetail(`${formatGrams(grams)} ${item.name}`, item.detail),
+      name: withDetail(item.name, item.detail),
+      us: [item.qty, item.unit].filter(Boolean).join(' '),
+      grams: grams === null ? null : formatGrams(grams),
     };
   }),
 }));
@@ -51,20 +63,20 @@ const anyConvertible = ingredientGroups.some((group) => group.items.some((item) 
 const ingredientIndex = buildIngredientIndex(
   ingredients,
   (item) => {
-    const grams = toGrams(item.qty, item.unit, item.name, densities);
+    const grams = gramsOf(item);
     return grams === null ? null : formatGrams(grams);
   },
   tools
 );
-// Link every step up front, in render order. One state object threads the popover id
-// counter, the set of ingredients that have already been given an inline amount (only the
-// first mention of each gets one), and the count of mentions that actually took one — which
-// is what gates the "Show amounts" button, with no sniffing of the generated HTML. Render
-// order matters now that the output is order-dependent, so this must stay a plain map.
+// Link every step up front, in render order — `[[key]]` references explicitly, other prose
+// lexically. One state object threads the popover id counter, the set of ingredients that
+// already have an inline amount (only the first mention of each gets one), and the count of
+// mentions that took one — which gates the "Show amounts" button. Order matters, so this must
+// stay a plain map. An unknown or ambiguous [[key]] throws here and fails the build.
 const linkState = createLinkState();
 const stepGroups = steps.map((group) => ({
   group: group.group,
-  items: group.items.map((step) => linkIngredientsInHtml(inlineMarkdown(step), ingredientIndex, linkState)),
+  items: group.items.map((step) => linkStep(step, ingredientIndex, linkState)),
 }));
 const hasInlineAmounts = (linkState.inlineable ?? 0) > 0;
 // The Steps-header units toggle drives the amounts baked into the prose — popovers included —
@@ -72,71 +84,51 @@ const hasInlineAmounts = (linkState.inlineable ?? 0) > 0;
 const anyStepAmounts = anyConvertible && linkState.n > 0;
 ---
 
-<article>
-  <h1 class="text-3xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">{title}</h1>
+<article class="rx-recipe">
+  <header>
+    <!-- The tag gets its own line: Dizzy's bouncify makes the title inline-block, which would
+         otherwise flow it up beside the tag. -->
+    <p class="rx-kicker"><span class="dz-tag dz-tag--pink">{category}</span></p>
+    <h1 class="rx-title" data-dz-bounce="hover">{title}</h1>
+    {description && <p class="rx-lede">{description}</p>}
+    {editHref && <a href={editHref} class="auth-only dz-link rx-edit">✎ Edit recipe</a>}
 
-  <p class="mt-2 text-sm capitalize text-neutral-500 dark:text-neutral-500">{category}</p>
-
-  {editHref && (
-    <a
-      href={editHref}
-      class="auth-only mt-1 inline-flex items-center gap-1 text-xs text-neutral-400 hover:text-accent-600 hover:underline dark:text-neutral-500 dark:hover:text-accent-100"
-    >
-      ✎ Edit recipe
-    </a>
-  )}
-
-  {hasMeta && (
-    <dl class="mt-6 flex flex-wrap gap-x-6 gap-y-2 rounded-lg bg-neutral-50 px-4 py-3 text-sm dark:bg-neutral-900">
-      {prepTime !== undefined && (
-        <div class="flex gap-1.5">
-          <dt class="text-neutral-500 dark:text-neutral-500">Prep</dt>
-          <dd class="font-medium text-neutral-800 dark:text-neutral-200">{prepTime} min</dd>
-        </div>
-      )}
-      {cookTime !== undefined && (
-        <div class="flex gap-1.5">
-          <dt class="text-neutral-500 dark:text-neutral-500">Cook</dt>
-          <dd class="font-medium text-neutral-800 dark:text-neutral-200">{cookTime} min</dd>
-        </div>
-      )}
-      {servings !== undefined && (
-        <div class="flex gap-1.5">
-          <dt class="text-neutral-500 dark:text-neutral-500">Servings</dt>
-          <dd class="font-medium text-neutral-800 dark:text-neutral-200">{servings}</dd>
-        </div>
-      )}
-    </dl>
-  )}
+    {meta.length > 0 && (
+      <dl class="rx-meta">
+        {meta.map((m) => (
+          <div>
+            <dt>{m.label}</dt>
+            <dd>{m.value}</dd>
+          </div>
+        ))}
+      </dl>
+    )}
+  </header>
 
   {tools.length > 0 && (
-    <section class="mt-8">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-500">Tools</h2>
-      <div class="mt-2 flex flex-wrap gap-1.5">
-        {tools.map((tool) => (
-          <span class="rounded-md border border-neutral-200 px-2 py-1 text-xs text-neutral-600 dark:border-neutral-800 dark:text-neutral-400">
-            {tool}
-          </span>
-        ))}
-      </div>
+    <section class="rx-section" aria-labelledby="rx-tools">
+      <h2 id="rx-tools" class="rx-h2">Tools</h2>
+      <ul class="rx-tools">
+        {tools.map((tool) => <li class="dz-tag">{tool}</li>)}
+      </ul>
     </section>
   )}
 
-  <section class="mt-8">
-    <div class="flex items-center justify-between gap-3">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-500">Ingredients</h2>
+  <section class="rx-section" aria-labelledby="rx-ingredients">
+    <div class="rx-section__head">
+      <h2 id="rx-ingredients" class="rx-h2">Ingredients</h2>
       {anyConvertible && <UnitsToggle />}
     </div>
-    <div id="ingredients-list" class="mt-3 space-y-4" data-units="us">
+    <div id="ingredients-list" class="rx-ingredients" data-units="us">
       {ingredientGroups.map((group) => (
         <div>
-          {group.group && <h3 class="mb-1.5 font-medium text-neutral-800 dark:text-neutral-200">{group.group}</h3>}
-          <ul class="space-y-1">
+          {group.group && <h3 class="rx-h3">{group.group}</h3>}
+          <ul class="rx-ing-list">
             {group.items.map((item) => (
-              <li class:list={['ing-item flex gap-2 text-neutral-700 dark:text-neutral-300', { 'is-convertible': item.grams !== null }]}>
-                <span class="text-accent-600 dark:text-accent-100" aria-hidden="true">&bull;</span>
-                <span class="ing-us">{item.us}</span>
-                {item.grams !== null && <span class="ing-grams">{item.grams}</span>}
+              <li class:list={['rx-ing', { 'is-convertible': item.grams !== null }]}>
+                {item.us && <span class="rx-amt ing-us">{item.us}</span>}
+                {item.grams !== null && <span class="rx-amt ing-grams">{item.grams}</span>}
+                <span class="rx-ing__name">{item.name}</span>
               </li>
             ))}
           </ul>
@@ -145,62 +137,42 @@ const anyStepAmounts = anyConvertible && linkState.n > 0;
     </div>
   </section>
 
-  <section class="mt-8">
-    <div class="flex items-center justify-between gap-3">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-500">Steps</h2>
-      {anyStepAmounts && <UnitsToggle label="Ingredient units in steps" />}
-    </div>
-    <div class="mt-3 space-y-4">
-      {stepGroups.map((group) => (
-        <div>
-          {group.group && <h3 class="mb-1.5 font-medium text-neutral-800 dark:text-neutral-200">{group.group}</h3>}
-          <ol class="space-y-3">
-            {group.items.map((html, i) => (
-              <li class="flex gap-3">
-                <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent-50 text-xs font-medium text-accent-700 dark:bg-neutral-800 dark:text-accent-100">
-                  {i + 1}
-                </span>
-                <span class="text-neutral-700 dark:text-neutral-300" set:html={html} />
-              </li>
-            ))}
-          </ol>
-        </div>
-      ))}
-    </div>
-    {hasInlineAmounts && (
-      <div class="mt-4 flex justify-end">
-        <button
-          type="button"
-          id="amounts-toggle"
-          aria-pressed="false"
-          class="rounded-lg border border-neutral-200 px-2.5 py-1 text-xs font-medium text-neutral-500 dark:border-neutral-800 dark:text-neutral-400"
-        >Show amounts</button>
+  <section class="rx-section" aria-labelledby="rx-steps">
+    <div class="rx-section__head">
+      <h2 id="rx-steps" class="rx-h2">Steps</h2>
+      <div class="rx-section__tools">
+        {hasInlineAmounts && (
+          <button type="button" id="amounts-toggle" aria-pressed="false" class="dz-btn dz-btn--ghost dz-btn--sm rx-amounts-btn">
+            Show amounts
+          </button>
+        )}
+        {anyStepAmounts && <UnitsToggle label="Ingredient units in steps" />}
       </div>
-    )}
+    </div>
+    {stepGroups.map((group) => (
+      <div class="rx-step-group">
+        {group.group && <h3 class="rx-h3">{group.group}</h3>}
+        <ol class="rx-steps">
+          {group.items.map((html, i) => (
+            <li class="rx-step">
+              <span class="rx-step__num" aria-hidden="true">{i + 1}</span>
+              <span class="rx-step__text" set:html={html} />
+            </li>
+          ))}
+        </ol>
+      </div>
+    ))}
   </section>
 
   {notes.length > 0 && (
-    <section class="mt-8">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-500">Notes</h2>
-      <ul class="mt-3 space-y-1.5">
-        {notes.map((note) => (
-          <li class="text-sm text-neutral-600 dark:text-neutral-400">{note}</li>
-        ))}
+    <section class="rx-section" aria-labelledby="rx-notes">
+      <h2 id="rx-notes" class="rx-h2">Notes</h2>
+      <ul class="rx-notes">
+        {notes.map((note) => <li>{note}</li>)}
       </ul>
     </section>
   )}
 </article>
-
-<style>
-  /* US mode: hide the grams labels. Grams mode: hide the US label only on items that have a
-     grams equivalent — non-convertible items keep showing their US text in both modes. */
-  #ingredients-list[data-units='us'] .ing-grams {
-    display: none;
-  }
-  #ingredients-list[data-units='grams'] .is-convertible .ing-us {
-    display: none;
-  }
-</style>
 
 <script>
   import { initIngredientPopovers } from '../ingredient-popover';

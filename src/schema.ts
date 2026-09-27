@@ -12,6 +12,14 @@ import type { SchemaContext } from 'astro/content/config';
 
 export const categoryValues = ['main', 'dessert', 'side', 'sauce', 'drink', 'other'] as const;
 
+/**
+ * An ingredient key: the handle steps use to reference an ingredient as `[[key]]`. Lowercase
+ * words joined by single hyphens. Optional on every item — the default is the slug of its name
+ * (see `ingredientKey` in ingredients.ts), so a key is only needed to disambiguate two items
+ * with the same name or to give a long name a short handle.
+ */
+export const INGREDIENT_KEY = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
 export const recipeSchema = ({ image }: SchemaContext) =>
   z.object({
     title: z.string(),
@@ -22,6 +30,10 @@ export const recipeSchema = ({ image }: SchemaContext) =>
     prepTime: z.number().int().nonnegative().optional(),
     cookTime: z.number().int().nonnegative().optional(),
     servings: z.number().int().positive().optional(),
+    // Freeform display strings for the meta strip: "8 scones", "400°F / 200°C". Optional, like
+    // every field added after v1 — a new required field would invalidate existing recipes.
+    yield: z.string().optional(),
+    oven: z.string().optional(),
     tools: z.array(z.string()).default([]),
     ingredients: z.array(
       z.object({
@@ -36,6 +48,11 @@ export const recipeSchema = ({ image }: SchemaContext) =>
             // Preparation note rendered after the name ("softened", "grated", "room temp").
             // Kept out of `name` so `name` stays a clean density-lookup and prose-matching key.
             detail: z.string().optional(),
+            // Handle for `[[key]]` references in steps. Defaults to the slug of `name`.
+            key: z.string().regex(INGREDIENT_KEY, 'use lowercase words joined by hyphens, e.g. "glaze-lemon"').optional(),
+            // Grams override for amounts the density table can't convert ("2 medium apples").
+            // Wins over the density lookup when set.
+            grams: z.number().positive().optional(),
           })
         ),
       })

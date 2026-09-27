@@ -4,68 +4,288 @@
  *
  *   @import "@izzy/recipe-engine/styles/recipes.css";
  *
- * Tailwind never scans node_modules, so the @source lines below register this package's
- * utility-class users with the consuming site's build. The paths resolve relative to this
- * file. Every file that uses Tailwind classes must live under one of these two directories:
- * without it, those classes silently vanish from the site's CSS.
+ * v2 is built on the Dizzy design system. Every colour, font, radius, stroke and shadow below
+ * is a Dizzy token custom property (--hotpink, --font-display, --radius-md, --shadow-soft, …)
+ * and the components also use Dizzy's `dz-*` classes (dz-tag, dz-seg, dz-btn, dz-row, dz-link),
+ * so the site must load Dizzy's tokens and bundle.css. A site without its own Dizzy tokens can
+ * import `@izzy/recipe-engine/styles/theme.css` for defaults; it still needs bundle.css.
  *
- * They are directories on purpose. A file or glob @source ends up scanning the file's whole
- * directory, which would pull in src/*.ts and harvest class-shaped words from comments
- * ("shadow", "invert") as dead CSS. So src/ root stays unscanned: code there must emit only
- * the hand-written .ing-* classes below, never Tailwind utilities.
+ * Nothing here is keyed on prefers-color-scheme: the tokens change value per theme, so the
+ * recipe follows whatever theme the site is showing.
  *
- * Colors come from the site's `--color-accent-*` theme tokens. Sites that don't define them
- * can also import `@izzy/recipe-engine/styles/theme.css` for a default palette.
+ * Tailwind never scans node_modules, so the @source lines register this package's component and
+ * client directories with the consuming site's build. v2 components use no Tailwind utilities,
+ * but the registration stays so a future one can't silently vanish. They are directories on
+ * purpose: a file or glob @source scans the whole directory and would harvest class-shaped words
+ * from src/ comments as dead CSS.
  */
 @source "../src/components";
 @source "../src/client";
 
-/* Ingredient-measurement popovers in recipe steps. Triggers + panels are injected into the
-   step HTML at build time (src/ingredients.ts), so these styles are global rather than in
-   Recipe.astro's scoped <style>, which wouldn't reach set:html content. The panel is
-   position:absolute → no layout shift; it reveals on hover, keyboard focus, or the [data-open]
-   set by the tap-toggle script (src/ingredient-popover.ts). */
+/* ------------------------------------------------------------------ page */
+
+.rx-recipe {
+  color: var(--ink);
+  font-family: var(--font-body);
+}
+
+.rx-kicker { margin: 0; }
+
+.rx-title {
+  margin: var(--space-3) 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(30px, 1.5vw + 24px, 38px);
+  line-height: 1.05;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.rx-lede {
+  margin: var(--space-3) 0 0;
+  font-size: 18px;
+  line-height: 29px;
+  color: var(--ink-muted);
+}
+
+.rx-edit {
+  display: inline-block;
+  margin-top: var(--space-2);
+  font-size: 14px;
+}
+
+/* The meta strip: a sunken, bevelled well of label / mono value pairs. */
+.rx-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-6);
+  margin: var(--space-5) 0 0;
+  padding: var(--space-3) var(--space-4);
+  border: var(--stroke-1) solid var(--outline);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  box-shadow: inset 2px 2px 0 var(--chrome-lo), inset -2px -2px 0 var(--chrome-hi);
+}
+.rx-meta > div { display: flex; flex-direction: column; gap: 2px; }
+.rx-meta dt {
+  font-size: 12px;
+  line-height: 14px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+.rx-meta dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--ink);
+}
+
+.rx-section { margin-top: var(--space-7); }
+
+.rx-section__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: var(--stroke-1) solid var(--outline);
+}
+.rx-section__tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+
+.rx-h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 24px;
+  line-height: 28px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.rx-h3 {
+  margin: var(--space-5) 0 var(--space-2);
+  font-family: var(--font-display);
+  font-size: 19px;
+  line-height: 24px;
+  font-weight: 600;
+  color: var(--orange-deep);
+}
+
+.rx-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+/* Tool names are sentence-case prose ("Bread pan"), not tag labels. */
+.rx-tools .dz-tag { text-transform: none; letter-spacing: 0; font-weight: 600; font-size: 13px; }
+
+/* ----------------------------------------------------------- ingredients */
+
+.rx-ing-list { margin: 0; padding: 0; list-style: none; }
+
+.rx-ing {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: var(--stroke-hair) solid var(--hairline);
+  font-size: 16px;
+  line-height: 26px;
+}
+.rx-ing:last-child { border-bottom: 0; }
+
+/* The amount column: mono, fixed width so names line up, pink so the eye finds it. */
+.rx-amt {
+  flex: none;
+  min-width: 5.5em;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 700;
+  color: var(--hotpink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* US ↔ grams in the list, driven by data-units on #ingredients-list (client/recipe-units.ts).
+   US mode hides grams; grams mode hides the US amount only where a grams one exists, so
+   count/unknown items keep their US text. */
+#ingredients-list[data-units='us'] .ing-grams { display: none; }
+#ingredients-list[data-units='grams'] .is-convertible .ing-us { display: none; }
+
+/* ----------------------------------------------------------------- steps */
+
+.rx-step-group + .rx-step-group { margin-top: var(--space-2); }
+
+.rx-steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rx-step { display: flex; gap: var(--space-4); }
+
+.rx-step__num {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  margin-top: 1px;
+  border: var(--stroke-1) solid var(--outline);
+  border-radius: var(--radius-pill);
+  background: var(--sunshine);
+  color: var(--on-sunshine);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: var(--shadow-pressed);
+}
+
+.rx-step__text { font-size: 18px; line-height: 29px; }
+
+/* "Show amounts" / "Hide amounts": the ghost button, filled pink while pressed. */
+.rx-amounts-btn[aria-pressed='true'] {
+  --dz-btn-fill: var(--hotpink-soft);
+  --dz-btn-fill-hover: var(--hotpink-soft);
+  box-shadow: var(--shadow-pressed);
+}
+
+/* ----------------------------------------------------------------- notes */
+
+.rx-notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 0;
+  padding: var(--space-4) var(--space-4) var(--space-4) var(--space-7);
+  border: var(--stroke-1) solid var(--outline);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  font-size: 16px;
+  line-height: 26px;
+  list-style: '✦  ';
+}
+.rx-notes li::marker { color: var(--aqua-deep); }
+
+/* ----------------------------------------------------- recipe index row */
+
+.rx-card { display: flex; align-items: center; gap: var(--space-2); }
+.rx-card__link { flex: 1; min-width: 0; }
+.rx-card__link .dz-row__title { margin: 0; }
+.rx-card__edit {
+  flex: none;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--ink-muted);
+  text-decoration: none;
+}
+.rx-card__edit:hover { color: var(--hotpink); background: var(--hotpink-soft); }
+
+/* ------------------------------------------------ ingredient references */
+/* Triggers + popovers are injected into the step HTML at build time (src/ingredients.ts), so
+   these rules are global rather than component-scoped (scoped styles can't reach set:html).
+   The panel is position:absolute → no layout shift; it reveals on hover, keyboard focus, or the
+   [data-open] the tap-toggle script sets (src/ingredient-popover.ts). */
 .ing-ref {
   position: relative;
   display: inline;
 }
 
+/* The mention: bold, with a dotted pink underline — weight and underline, not colour alone. */
 .ing-ref-btn {
   font: inherit;
-  font-weight: 600; /* all matched ingredients read bold in the steps */
+  font-weight: 600;
   color: inherit;
   background: none;
   border: none;
+  border-bottom: 2px dotted var(--hotpink);
+  border-radius: 0;
   padding: 0;
   margin: 0;
   cursor: help;
-  border-bottom: 1px dashed var(--color-accent-600);
+}
+.ing-ref-btn:hover,
+.ing-ref-btn:focus-visible { color: var(--hotpink); }
+.ing-ref-btn:focus-visible { outline: var(--stroke-2) solid var(--focus); outline-offset: 2px; }
+
+/* Pinned by a tap/click: a visible ground, so the state doesn't hang on colour. */
+.ing-ref[data-open] > .ing-ref-btn {
+  background: var(--hotpink-soft);
+  border-bottom-style: solid;
 }
 
-.ing-ref-btn:hover,
-.ing-ref-btn:focus-visible {
-  color: var(--color-accent-700);
-}
+/* An explicitly referenced ingredient with no amount ("[[salt]]"): emphasis, no popover. */
+.ing-plain { font-weight: 600; }
 
 .ing-pop {
   position: absolute;
-  bottom: calc(100% + 6px);
+  bottom: calc(100% + 8px);
   left: 0;
   z-index: 20;
   display: none;
   min-width: max-content;
-  max-width: 16rem;
-  padding: 0.375rem 0.5rem;
-  border-radius: 0.5rem;
-  border: 1px solid #e5e5e5; /* neutral-200 */
-  background: #ffffff;
-  color: #404040; /* neutral-700 */
-  font-size: 0.75rem;
-  line-height: 1.1rem;
-  font-weight: 500;
+  max-width: 18rem;
+  padding: var(--space-2) var(--space-3);
+  border: var(--stroke-1) solid var(--outline);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 700;
   text-align: left;
   white-space: nowrap;
-  box-shadow: 0 4px 12px rgb(0 0 0 / 0.1);
+  box-shadow: var(--shadow-soft);
   cursor: default;
 }
 
@@ -76,51 +296,43 @@
 }
 
 /* One row per group when an ingredient is measured in more than one place. */
-.ing-pop-row {
-  display: block;
+.ing-pop-row { display: block; }
+
+.ing-pop-group {
+  font-family: var(--font-body);
+  font-weight: 400;
+  color: var(--ink-muted);
 }
 
 /* US ↔ grams inside any generated amount — the popover panel and the inline copy alike —
-   driven by the same toggle as the ingredient list (which sets data-units on <html>).
-   Scoped to `.ing-amt`, a class only src/ingredients.ts emits, so it never touches the
-   ingredient list, which has its own (component-scoped) us/grams rules. Grams text is
-   hidden until grams mode; in grams mode the US text hides only on convertible amounts, so
-   count/unknown items keep showing US. Before the toggle script runs, no data-units is set
-   → the default US view. */
-.ing-amt .ing-grams {
-  display: none;
-}
-:root[data-units='grams'] .ing-amt.ing-conv .ing-us {
-  display: none;
-}
-:root[data-units='grams'] .ing-amt.ing-conv .ing-grams {
-  display: inline;
-}
+   driven by the same toggle as the ingredient list (which sets data-units on <html>). Scoped to
+   `.ing-amt`, a class only src/ingredients.ts emits. Grams text is hidden until grams mode; in
+   grams mode the US text hides only on convertible amounts, so count/unknown items keep US.
+   Before the toggle script runs, no data-units is set → the default US view. */
+.ing-amt .ing-grams { display: none; }
+:root[data-units='grams'] .ing-amt.ing-conv .ing-us { display: none; }
+:root[data-units='grams'] .ing-amt.ing-conv .ing-grams { display: inline; }
 
-/* Inline amounts mode. A mention that resolved to exactly one measurement, is the first of
-   its ingredient, and isn't already quantified in the prose bakes a second copy of its
-   amount before the name (`.ing-inline`). It ships hidden, so the default — and the no-JS —
-   page is exactly the popover-only one. The "Show amounts" button stamps
-   <html data-amounts="inline">, which swaps that copy in and suppresses only that mention's
-   popover and hover affordance; every other mention keeps the popover in both modes.
+/* Inline amounts mode. A mention that resolved to exactly one measurement, is the first of its
+   ingredient, and isn't already quantified in the prose bakes a second copy of its amount before
+   the name (`.ing-inline`). It ships hidden, so the default — and the no-JS — page is exactly
+   the popover-only one. The "Show amounts" button stamps <html data-amounts="inline">, which
+   swaps that copy in and suppresses only that mention's popover and hover affordance.
 
-   These rules are (0,4,0) — :root + the attribute + two classes — so they beat the
-   reveal rules below at (0,3,0) regardless of source order, and the :hover/:focus-visible
-   pair is (0,5,0) against `.ing-ref-btn:hover` at (0,2,0). `border-bottom-style` is a
-   longhand, so it is orthogonal to the dark-mode block's `border-bottom-color`. */
-.ing-inline {
-  display: none;
-}
+   These rules are (0,4,0) — :root + the attribute + two classes — so they beat the reveal rules
+   above at (0,3,0) regardless of source order, and the :hover/:focus-visible pair is (0,5,0)
+   against `.ing-ref-btn:hover` at (0,2,0). */
+.ing-inline { display: none; }
 .ing-inline .ing-amt {
   white-space: nowrap; /* never break "½ cup" across lines */
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  font-weight: 700;
+  color: var(--hotpink);
 }
 
-:root[data-amounts='inline'] .ing-has-amt > .ing-inline {
-  display: inline;
-}
-:root[data-amounts='inline'] .ing-has-amt > .ing-pop {
-  display: none;
-}
+:root[data-amounts='inline'] .ing-has-amt > .ing-inline { display: inline; }
+:root[data-amounts='inline'] .ing-has-amt > .ing-pop { display: none; }
 :root[data-amounts='inline'] .ing-has-amt > .ing-ref-btn {
   cursor: inherit;
   border-bottom-style: none;
@@ -130,36 +342,12 @@
   color: inherit;
 }
 
-.ing-pop-group {
-  color: #737373; /* neutral-500 */
-  font-weight: 400;
-}
-
-@media (prefers-color-scheme: dark) {
-  .ing-ref-btn {
-    border-bottom-color: var(--color-accent-100);
-  }
-  .ing-ref-btn:hover,
-  .ing-ref-btn:focus-visible {
-    color: var(--color-accent-100);
-  }
-  .ing-pop {
-    border-color: #404040; /* neutral-700 */
-    background: #262626; /* neutral-800 */
-    color: #e5e5e5; /* neutral-200 */
-    box-shadow: 0 4px 12px rgb(0 0 0 / 0.4);
-  }
-  .ing-pop-group {
-    color: #a3a3a3; /* neutral-400 */
-  }
-}
-
-/* Ingredient-name typeahead (src/ingredient-typeahead.ts), used on izzybennett.com's /upload.
-   The options are built by that script, so — like the .ing-pop rules above — these live here
-   instead of as utility classes. The consuming page supplies the markup the script drives: a
-   [data-typeahead] wrapper holding the name input, a [data-ta-ghost] span and a
-   [data-ta-list] listbox. Both overlays are position:absolute inside that wrapper, so neither
-   disturbs the row's layout. */
+/* ---------------------------------------------------- ingredient typeahead */
+/* The /upload ingredient-name typeahead (src/ingredient-typeahead.ts). The options are built by
+   that script, so — like the .ing-pop rules above — these live here instead of as utilities.
+   The consuming page supplies the markup the script drives: a [data-typeahead] wrapper holding
+   the name input, a [data-ta-ghost] span and a [data-ta-list] listbox. Both overlays are
+   position:absolute inside that wrapper, so neither disturbs the row's layout. */
 .ing-ta-list {
   position: absolute;
   top: calc(100% + 4px);
@@ -169,12 +357,13 @@
   max-height: 14rem;
   overflow-y: auto;
   margin: 0;
-  padding: 0.25rem 0;
+  padding: var(--space-1) 0;
   list-style: none;
-  border: 1px solid #d4d4d4; /* neutral-300 */
-  border-radius: 0.5rem;
-  background: #fff;
-  box-shadow: 0 4px 12px rgb(0 0 0 / 0.1);
+  border: var(--stroke-1) solid var(--outline);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--ink);
+  box-shadow: var(--shadow-soft);
   font-size: 0.875rem;
 }
 
@@ -188,57 +377,38 @@
 }
 
 .ing-ta-opt:hover,
-.ing-ta-opt[aria-selected="true"] {
-  background: var(--color-accent-50);
-}
+.ing-ta-opt[aria-selected='true'] { background: var(--hotpink-soft); }
 
 .ing-ta-grams {
   flex: none;
-  color: #737373; /* neutral-500 */
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 
 /* The inline completion. It sits over the input with pointer-events:none, so the input keeps
    its own background, border, focus ring and caret; only the untyped remainder is painted.
-   The padding and border here MUST stay in step with `itemInput` in izzybennett.com's
-   src/pages/upload.astro (px-3 py-2 + a 1px border) — a cross-repo coupling: inset:0 spans
-   the border box, so any mismatch shifts the ghost text out of line with what's been typed. */
+   Its padding and border MUST match the name input's, or the ghost text shifts out of line with
+   what's been typed (inset:0 spans the border box). They're variables so the consuming page
+   sets them next to its field styles instead of this package hard-coding the site's input:
+     --ing-ta-ghost-padding   default 0.5rem 0.75rem
+     --ing-ta-ghost-border    default 1px */
 .ing-ta-ghost {
   position: absolute;
   inset: 0;
   z-index: 10;
   display: flex;
   align-items: center;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid transparent;
+  padding: var(--ing-ta-ghost-padding, 0.5rem 0.75rem);
+  border: var(--ing-ta-ghost-border, 1px) solid transparent;
   overflow: hidden;
   white-space: pre;
   pointer-events: none;
   font: inherit;
-  color: #a3a3a3; /* neutral-400, matching the field's own placeholder */
+  color: var(--ink-muted);
+  opacity: 0.7;
 }
 
-/* Reserves the exact width of the typed text without painting it, so the remainder starts
-   at the caret. No measurement needed: the browser lays it out in the input's own font. */
-.ing-ta-ghost > [data-ta-typed] {
-  visibility: hidden;
-}
-
-@media (prefers-color-scheme: dark) {
-  .ing-ta-list {
-    border-color: #404040; /* neutral-700 */
-    background: #262626; /* neutral-800 */
-    color: #e5e5e5; /* neutral-200 */
-    box-shadow: 0 4px 12px rgb(0 0 0 / 0.4);
-  }
-  .ing-ta-opt:hover,
-  .ing-ta-opt[aria-selected="true"] {
-    background: #404040; /* neutral-700 */
-  }
-  .ing-ta-grams {
-    color: #a3a3a3; /* neutral-400 */
-  }
-  .ing-ta-ghost {
-    color: #737373; /* neutral-500, subordinate to the neutral-100 text it trails */
-  }
-}
+/* Reserves the exact width of the typed text without painting it, so the remainder starts at
+   the caret. No measurement needed: the browser lays it out in the input's own font. */
+.ing-ta-ghost > [data-ta-typed] { visibility: hidden; }
