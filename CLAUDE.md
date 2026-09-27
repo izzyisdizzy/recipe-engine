@@ -22,9 +22,10 @@ package instead of externalizing it.
   never Tailwind utilities, since `src/` root is not scanned).
 - `src/client/` — client scripts that toggle **Tailwind utility classes**
   (`recipe-units`, `recipe-amounts`).
-- `src/components/` — `Recipe.astro`, `RecipeCard.astro`, `UnitsToggle.astro`.
+- `src/components/` — `Recipe.astro`, `RecipeCard.astro`, `UnitsToggle.astro`. Since v2 they
+  render on Dizzy: `dz-*` classes plus the hand-written `.rx-*` rules in `styles/recipes.css`.
 - `styles/recipes.css` — hand-written `.ing-*` styles + the `@source` registration.
-  `styles/theme.css` — optional accent palette for sites without one.
+  `styles/theme.css` — default Dizzy token values for sites that don't define them.
 - `seed/densities.json` — sample data for tests and standalone users only.
 
 ### Build / test
@@ -53,6 +54,12 @@ on node 22. Pushing workflow files needs SSH (the gh HTTPS token lacks `workflow
   trips its brand checks.
 - **Schema changes are migrations for the consumer.** A new required field invalidates
   every existing recipe file in izzybennett.com — give it a default or make it optional.
+- **Styles read Dizzy tokens only.** Every colour/font/radius/shadow in `styles/recipes.css` is a
+  Dizzy token custom property, and components use Dizzy `dz-*` classes; never hard-code a hex or
+  key a rule on `prefers-color-scheme` (the site's theme toggle can't reach it). Client scripts
+  set `aria-pressed` only — no class toggling.
+- **`[[key]]` failures fail the build.** `lookupRef` in `src/ingredients.ts` throws on an unknown or
+  ambiguous key on purpose: a typo must not render silently. Keep the message listing valid keys.
 - **Storage keys are a contract.** `izzy-recipe-units` and `izzy-recipe-amounts` hold
   visitors' saved preferences; renaming one silently resets them.
 - **Release = tag.** Bump `version`, tag `vX.Y.Z` on a commit that's on `main` (or will be

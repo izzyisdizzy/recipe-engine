@@ -1,13 +1,36 @@
 /*
- * Optional default palette for sites that don't define their own `--color-accent-*` tokens.
- * The recipe components and recipes.css use accent-50/100/600/700; without them, popover
- * underlines and step-number badges render uncolored. Import after tailwindcss:
+ * Default Dizzy tokens for sites that don't define their own. recipes.css reads only token
+ * custom properties; a Dizzy site already declares them (generated from its tokens.json) and
+ * should NOT import this file. Everyone else imports it after tailwindcss:
  *
  *   @import "@izzy/recipe-engine/styles/theme.css";
+ *
+ * It still needs Dizzy's bundle.css for the dz-* component classes. Values are Dizzy's
+ * "daylight" theme, switching to "afterglow" with the OS. `:where()` keeps specificity at zero
+ * so any site value wins.
  */
-@theme {
-  --color-accent-50: #fdf2f8;
-  --color-accent-100: #fce7f3;
-  --color-accent-600: #db2777;
-  --color-accent-700: #be185d;
+:where(:root) {
+  --surface: #fff4e3; --surface-raised: #fffdf8; --surface-sunken: #ffe0c2;
+  --ink: #3b1d0e; --ink-muted: #7a4525; --hairline: #edcfae; --outline: #3b1d0e;
+  --hotpink: #c60063; --hotpink-strong: #a80055; --hotpink-soft: #ffd9ec; --on-hotpink: #fff2f8;
+  --orange-deep: #9c3d00; --sunshine: #ffc93c; --on-sunshine: #3b1d0e;
+  --aqua-deep: #00697a; --focus: #00697a; --chrome-hi: #fffaf2; --chrome-lo: #d9b48c;
+  --shadow-pressed: 1px 1px 0 #3b1d0e; --shadow-soft: 0 10px 24px rgba(59, 29, 14, 0.18);
+  --font-display: "Baloo 2", "Trebuchet MS", Verdana, sans-serif;
+  --font-body: "Space Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Space Mono", "Courier New", ui-monospace, monospace;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 24px; --space-6: 32px; --space-7: 48px;
+  --radius-xs: 6px; --radius-sm: 10px; --radius-md: 16px; --radius-pill: 999px;
+  --stroke-hair: 1px; --stroke-1: 2px; --stroke-2: 3px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :where(:root) {
+    --surface: #1b1210; --surface-raised: #2a1c17; --surface-sunken: #120b09;
+    --ink: #ffeede; --ink-muted: #d3a98d; --hairline: #43302a; --outline: #ffeede;
+    --hotpink: #ff5fae; --hotpink-strong: #ff8cc6; --hotpink-soft: #4d0f30; --on-hotpink: #2b0413;
+    --orange-deep: #ffb073; --sunshine: #ffd166; --on-sunshine: #2b1d00;
+    --aqua-deep: #7fe6f0; --focus: #5ee7f2; --chrome-hi: #55403a; --chrome-lo: #0e0906;
+    --shadow-pressed: 1px 1px 0 #0b0605; --shadow-soft: 0 12px 28px rgba(0, 0, 0, 0.55);
+  }
 }

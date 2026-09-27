@@ -3,8 +3,11 @@ import {
   buildIngredientIndex,
   createLinkState,
   linkIngredientsInHtml,
+  linkStep,
+  ingredientKey,
   type IngredientGroup,
 } from './ingredients';
+import { inlineMarkdown } from './markdown';
 
 // The legacy comma-in-name shape of chocochip-cookies.md (single unnamed group). The recipe
 // itself now uses name + detail; this fixture keeps the old shape on purpose as the control arm
@@ -508,5 +511,116 @@ describe('verb-use guard', () => {
     expect(render('Heat the oil in a pan.', oils)).toContain('ing-inline');
     expect(render('Add the oil and whisk.', oils)).toContain('ing-inline');
     expect(render('Pour in the oil.', oils)).toContain('ing-inline');
+  });
+});
+
+describe('[[key]] references', () => {
+  // Mirrors the example recipe in the site's redesign plan: an explicit short key, a duplicate
+  // name disambiguated by key, an unmeasured item, and a grams override.
+  const scones: IngredientGroup[] = [
+    {
+      group: 'Dough',
+      items: [
+        { name: 'flour', qty: '2', unit: 'cup' },
+        { name: 'cold butter', key: 'butter', qty: '½', unit: 'cup', detail: 'cubed' },
+        { name: 'lemon', qty: '1', detail: 'zested', grams: 6 },
+        { name: 'salt' },
+      ],
+    },
+    {
+      group: 'Glaze',
+      items: [
+        { name: 'lemon juice', key: 'glaze-lemon', qty: '1 ½', unit: 'tbsp' },
+        { name: 'powdered sugar', qty: '½', unit: 'cup' },
+      ],
+    },
+  ];
+  const gramsOf = (item: { grams?: number; qty?: string }) => (item.grams ? `${item.grams} g` : null);
+  const idx = () => buildIngredientIndex(scones, gramsOf);
+  const step = (text: string, state = createLinkState()) => linkStep(text, idx(), state);
+
+  it('derives default keys from the name', () => {
+    expect(ingredientKey({ name: 'Softened Butter (unsalted)' })).toBe('softened-butter');
+    expect(ingredientKey({ name: 'butter, softened' })).toBe('butter');
+    expect(ingredientKey({ name: 'crème fraîche' })).toBe('creme-fraiche');
+    expect(ingredientKey({ name: 'cold butter', key: 'butter' })).toBe('butter');
+  });
+
+  it('links a default-keyed reference, labelled with the item name', () => {
+    const html = step('Whisk the [[flour]].');
+    expect(html).toContain('>flour</button>');
+    expect(html).toContain('2 cup');
+  });
+
+  it('links an explicit key and uses a display label when given', () => {
+    const html = step('Whisk in the [[glaze-lemon|lemon juice]].');
+    expect(html).toContain('>lemon juice</button>');
+    expect(html).toContain('1 ½ tbsp');
+    expect(html).not.toContain('[[');
+  });
+
+  it('resolves exactly the keyed item where lexical matching would be ambiguous', () => {
+    // A bare "lemon" lexically matches both "lemon" and "lemon juice"; the key picks one.
+    const html = step('Add the [[lemon|lemon zest]].');
+    expect(html).toContain('>lemon zest</button>');
+    expect(html).toContain('6 g'); // the grams override, via the caller's gramsOf
+    expect(html).not.toContain('ing-pop-row'); // one measurement, not a multi-row popover
+  });
+
+  it('gives an explicit reference the inline amount, once per ingredient', () => {
+    const state = createLinkState();
+    step('Cut in the [[butter]].', state);
+    const second = step('Chill the [[butter]] again.', state);
+    expect(state.inlineable).toBe(1);
+    expect(second).not.toContain('ing-inline');
+  });
+
+  it('keeps the stated-quantity guard for explicit references', () => {
+    const state = createLinkState();
+    expect(step('Add 1 cup of the [[flour]].', state)).not.toContain('ing-inline');
+    expect(state.inlineable).toBe(0);
+  });
+
+  it('renders an unmeasured item as plain emphasis, not a popover', () => {
+    const html = step('Season with [[salt]].');
+    expect(html).toContain('<span class="ing-plain">salt</span>');
+    expect(html).not.toContain('ing-pop');
+  });
+
+  it('still links unbracketed prose lexically in the same step', () => {
+    const html = step('Cut the [[butter]] into the flour.');
+    expect((html.match(/ing-ref-btn/g) ?? []).length).toBe(2);
+  });
+
+  it('survives markdown around and inside the label', () => {
+    const html = step("**Now** fold in the [[lemon|lemon's zest]].");
+    expect(html).toContain('<strong>Now</strong>');
+    // The label bypassed markdown, which would have turned the apostrophe into &#39;.
+    expect(html).toContain(">lemon's zest</button>");
+  });
+
+  it('renders a reference inside inline code as plain text', () => {
+    const html = step('Type `[[flour]]` to reference it.');
+    expect(html).not.toContain('ing-ref-btn');
+    expect(html).toContain('<code>flour</code>');
+  });
+
+  it('fails the build on an unknown key, listing the valid ones', () => {
+    expect(() => step('Add the [[flower]].')).toThrow(/Unknown ingredient reference \[\[flower\]\].*flour/);
+  });
+
+  it('fails the build on a key two items share', () => {
+    const dupes: IngredientGroup[] = [
+      { group: 'Bread', items: [{ name: 'oat milk', qty: '½', unit: 'cup' }] },
+      { group: 'Icing', items: [{ name: 'oat milk', qty: '2', unit: 'tbsp' }] },
+    ];
+    expect(() => linkStep('Add [[oat-milk]].', buildIngredientIndex(dupes))).toThrow(/matches 2 ingredients \(Bread, Icing\)/);
+  });
+
+  it('leaves steps without references exactly as the lexical linker renders them', () => {
+    const text = 'Beat the butter and brown sugar.';
+    expect(linkStep(text, buildIngredientIndex(cookies))).toBe(
+      linkIngredientsInHtml(inlineMarkdown(text), buildIngredientIndex(cookies))
+    );
   });
 });

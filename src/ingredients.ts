@@ -15,10 +15,15 @@
  * aliases — so a recipe with a plain "sugar" resolves "sugar" to that, while a recipe with
  * only "granulated sugar" + "powdered sugar" resolves "sugar" to both (shown with labels).
  *
+ * Steps can also name an ingredient explicitly as `[[key]]` or `[[key|display text]]` (see
+ * `linkStep`). An explicit reference resolves to exactly that item — no guessing — and prose
+ * without brackets keeps the lexical matching above, so existing recipes need no migration.
+ *
  * All logic is pure and build-time (Astro SSG) — no client parsing.
  */
 
 import { UNICODE_FRACTIONS, UNIT_ALIASES } from './units';
+import { inlineMarkdown } from './markdown';
 
 export interface StructuredItem {
   name: string;
@@ -26,6 +31,10 @@ export interface StructuredItem {
   unit?: string;
   /** Prep note ("softened"). Carried for typing only — popovers show amounts, not prep. */
   detail?: string;
+  /** Handle for `[[key]]` step references; defaults to the slug of `name`. */
+  key?: string;
+  /** Grams override; the caller's `gramsOf` decides whether to honour it. */
+  grams?: number;
 }
 
 export interface IngredientGroup {
@@ -58,6 +67,36 @@ export interface IngredientIndex {
    * a step never reads "mix with 1 egg beater". Null when the recipe lists no tools.
    */
   avoid: RegExp | null;
+  /**
+   * Ingredient key → every item registered under it, for `[[key]]` references. More than one
+   * candidate means two items share a default key (the same name in two groups) and a
+   * reference to it is ambiguous. `entry` is null for an unmeasured item ("Salt to taste").
+   */
+  keys: Map<string, KeyedItem[]>;
+}
+
+interface KeyedItem {
+  /** Text a bare `[[key]]` renders: the item's name as written, minus any legacy comma-note. */
+  label: string;
+  entry: Entry | null;
+  group?: string;
+}
+
+/**
+ * The key an item answers to in `[[key]]` references: its explicit `key`, else the slug of its
+ * name ("Softened Butter (unsalted)" → "softened-butter"). Parentheticals and a legacy
+ * comma-note are dropped first, matching how the name is cleaned for prose matching.
+ */
+export function ingredientKey(item: Pick<StructuredItem, 'name' | 'key'>): string {
+  if (item.key) return item.key;
+  return item.name
+    .replace(/\([^)]*\)/g, ' ')
+    .split(',')[0]
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '') // strip accents: "crème" → "creme"
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 /**
@@ -248,15 +287,24 @@ export function buildIngredientIndex(
     forms.set(key, rec);
   };
 
+  const keys = new Map<string, KeyedItem[]>();
+
   for (const g of groups) {
     for (const item of g.items) {
       const us = measurementLabel(item);
-      if (!us) continue;
       const canonical = cleanName(item.name);
-      if (!canonical) continue;
-      const grams = gramsOf ? gramsOf(item) : null;
-      const entry: Entry = { name: canonical, us, grams, group: g.group };
+      const entry: Entry | null =
+        us && canonical ? { name: canonical, us, grams: gramsOf ? gramsOf(item) : null, group: g.group } : null;
 
+      // Every item is referenceable by key, measured or not, so a [[salt]] still resolves.
+      const key = ingredientKey(item);
+      if (key) {
+        const keyed = keys.get(key) ?? [];
+        keyed.push({ label: (item.name.split(',')[0] ?? item.name).trim(), entry, group: g.group });
+        keys.set(key, keyed);
+      }
+
+      if (!entry) continue;
       for (const f of phraseForms(canonical)) add(f, entry, true);
       for (const alias of genericAliases(canonical)) {
         for (const f of phraseForms(alias)) add(f, entry, false);
@@ -268,6 +316,7 @@ export function buildIngredientIndex(
     forms,
     regex: buildRegex([...forms.keys()]),
     avoid: buildRegex(avoidPhrases.map(norm).filter((p) => p.length > 1)),
+    keys,
   };
 }
 
@@ -395,10 +444,11 @@ export function createLinkState(): LinkState {
 export function linkIngredientsInHtml(
   html: string,
   index: IngredientIndex,
-  state: LinkState = createLinkState()
+  state: LinkState = createLinkState(),
+  refs: StepRef[] = []
 ): string {
   const { regex } = index;
-  if (!regex) return html;
+  if (!regex && refs.length === 0) return html;
 
   const seen = (state.seen ??= new Set<string>());
   state.inlineable ??= 0;
@@ -408,6 +458,55 @@ export function linkIngredientsInHtml(
   // Tags and entities collapse to a space: they never carry a quantity themselves, and a
   // space keeps "add <strong>2 cups</strong> flour" readable as one run to the matcher.
   let carry = '';
+
+  /** Lexical linking of one plain-text run; `before` is the step's text up to the run. */
+  const linkText = (text: string, before: string): string => {
+    if (!regex) return text;
+    // Spans of this run covered by an avoid phrase (a tool name); a mention starting inside
+    // one is a coincidence of wording, not a real use of the ingredient.
+    const avoided: Array<[number, number]> = [];
+    if (index.avoid) {
+      index.avoid.lastIndex = 0;
+      for (let m = index.avoid.exec(text); m !== null; m = index.avoid.exec(text)) {
+        avoided.push([m.index, m.index + m[0].length]);
+      }
+    }
+
+    return text.replace(regex, (match: string, _form: string, offset: number) => {
+      const entries = resolve(index, match);
+      if (entries.length === 0) return match;
+
+      const inline =
+        entries.length === 1 &&
+        candidateCount(index, match) === 1 &&
+        !avoided.some(([a, b]) => offset >= a && offset < b) &&
+        !VERB_USE.test(text.slice(offset + match.length)) &&
+        !PRECEDING_QTY.test(before + text.slice(0, offset)) &&
+        !seen.has(entryKey(entries[0]));
+      if (inline) {
+        seen.add(entryKey(entries[0]));
+        state.inlineable = (state.inlineable ?? 0) + 1;
+      }
+      return buildTrigger(match, entries, state.n++, inline);
+    });
+  };
+
+  /**
+   * One explicit `[[key]]` reference. It resolves to exactly the keyed item, so the lexical
+   * guards (ambiguity, verb use, tool names) don't apply; only the stated-quantity guard does,
+   * because "add 1 cup [[flour]]" would otherwise read "add 1 cup 1 cup flour" in amounts mode.
+   */
+  const linkRef = (ref: StepRef, keyed: KeyedItem, before: string): string => {
+    const label = ref.label ?? keyed.label;
+    if (!keyed.entry) return `<span class="ing-plain">${escapeHtml(label)}</span>`;
+    const entry = keyed.entry;
+    const inline = !PRECEDING_QTY.test(before) && !seen.has(entryKey(entry));
+    if (inline) {
+      seen.add(entryKey(entry));
+      state.inlineable = (state.inlineable ?? 0) + 1;
+    }
+    return buildTrigger(label, [entry], state.n++, inline);
+  };
 
   // Split into tags, entities, and the text between them; odd matches are tags/entities.
   return html
@@ -426,37 +525,72 @@ export function linkIngredientsInHtml(
         return token; // HTML entity — leave untouched
       }
 
-      const before = carry;
-      carry += token;
-      if (skipDepth > 0) return token; // inside <a>/<code>
-
-      // Spans of this token covered by an avoid phrase (a tool name); a mention starting
-      // inside one is a coincidence of wording, not a real use of the ingredient.
-      const avoided: Array<[number, number]> = [];
-      if (index.avoid) {
-        index.avoid.lastIndex = 0;
-        for (let m = index.avoid.exec(token); m !== null; m = index.avoid.exec(token)) {
-          avoided.push([m.index, m.index + m[0].length]);
+      // Text run: alternate plain text and `[[key]]` placeholders (odd parts are ref indexes).
+      const parts = token.split(REF_PLACEHOLDER);
+      let out = '';
+      for (let i = 0; i < parts.length; i++) {
+        const before = carry;
+        if (i % 2 === 1) {
+          const ref = refs[Number(parts[i])];
+          const keyed = lookupRef(index, ref);
+          carry += ref.label ?? keyed.label;
+          // Inside <a>/<code>: validated above, but rendered as plain text — no nested button.
+          out += skipDepth > 0 ? escapeHtml(ref.label ?? keyed.label) : linkRef(ref, keyed, before);
+        } else {
+          carry += parts[i];
+          out += skipDepth > 0 ? parts[i] : linkText(parts[i], before);
         }
       }
-
-      return token.replace(regex, (match: string, _form: string, offset: number) => {
-        const entries = resolve(index, match);
-        if (entries.length === 0) return match;
-
-        const inline =
-          entries.length === 1 &&
-          candidateCount(index, match) === 1 &&
-          !avoided.some(([a, b]) => offset >= a && offset < b) &&
-          !VERB_USE.test(token.slice(offset + match.length)) &&
-          !PRECEDING_QTY.test(before + token.slice(0, offset)) &&
-          !seen.has(entryKey(entries[0]));
-        if (inline) {
-          seen.add(entryKey(entries[0]));
-          state.inlineable = (state.inlineable ?? 0) + 1;
-        }
-        return buildTrigger(match, entries, state.n++, inline);
-      });
+      return out;
     })
     .join('');
+}
+
+/** One `[[key]]` or `[[key|label]]` reference pulled out of a step before markdown runs. */
+export interface StepRef {
+  key: string;
+  label?: string;
+}
+
+/** `[[key]]` / `[[key|display text]]`. The key part excludes `|` and `]`. */
+const REF_SYNTAX = /\[\[\s*([^\]|]+?)\s*(?:\|\s*([^\]]+?)\s*)?\]\]/g;
+
+// Private-use code points: markdown passes them through untouched and no real step text uses
+// them, so a reference survives inlineMarkdown as an opaque token instead of being escaped.
+const REF_OPEN = '';
+const REF_CLOSE = '';
+const REF_PLACEHOLDER = new RegExp(`${REF_OPEN}(\\d+)${REF_CLOSE}`);
+
+/**
+ * Resolve a reference against the recipe's keys, or fail the build with a message that says
+ * how to fix it. A typo'd key must not quietly render as nothing.
+ */
+function lookupRef(index: IngredientIndex, ref: StepRef): KeyedItem {
+  const candidates = index.keys.get(ref.key);
+  if (!candidates) {
+    const known = [...index.keys.keys()].sort().join(', ') || '(none)';
+    throw new Error(`[recipe-engine] Unknown ingredient reference [[${ref.key}]]. Keys in this recipe: ${known}.`);
+  }
+  if (candidates.length > 1) {
+    const where = candidates.map((c) => c.group ?? 'ungrouped').join(', ');
+    throw new Error(
+      `[recipe-engine] [[${ref.key}]] matches ${candidates.length} ingredients (${where}). ` +
+        'Give one of them a distinct `key:` and reference that.'
+    );
+  }
+  return candidates[0];
+}
+
+/**
+ * Render one step: its inline markdown, with every ingredient linked — `[[key]]` references
+ * explicitly, the rest of the prose lexically. `state` threads through all steps of a recipe in
+ * render order (see createLinkState).
+ */
+export function linkStep(step: string, index: IngredientIndex, state: LinkState = createLinkState()): string {
+  const refs: StepRef[] = [];
+  const text = step.replace(REF_SYNTAX, (_match: string, key: string, label?: string) => {
+    refs.push({ key, label: label || undefined });
+    return `${REF_OPEN}${refs.length - 1}${REF_CLOSE}`;
+  });
+  return linkIngredientsInHtml(inlineMarkdown(text), index, state, refs);
 }

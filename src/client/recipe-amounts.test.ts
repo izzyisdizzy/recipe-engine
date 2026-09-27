@@ -69,7 +69,7 @@ function setup(withButton = true) {
     inlined(0, 'butter', '½ cup') +
     ambiguous(1, 'vanilla') +
     (withButton
-      ? '<button type="button" id="amounts-toggle" aria-pressed="false" class="text-neutral-500 dark:text-neutral-400">Show amounts</button>'
+      ? '<button type="button" id="amounts-toggle" aria-pressed="false" class="dz-btn dz-btn--ghost dz-btn--sm">Show amounts</button>'
       : '');
   return {
     ref: document.querySelector<HTMLElement>('.ing-has-amt')!,
@@ -167,15 +167,13 @@ describe('initAmountsToggle', () => {
     expect('amounts' in document.documentElement.dataset).toBe(false);
   });
 
-  it('tracks the active classes with the pressed state', () => {
+  it('never touches classes — the pressed look is CSS keyed on aria-pressed', () => {
     const { toggle } = setup();
+    const before = toggle.className;
     initAmountsToggle(toggle);
-    expect(toggle.classList.contains('text-neutral-500')).toBe(true);
-
     toggle.click();
-    expect(toggle.classList.contains('bg-accent-50')).toBe(true);
-    expect(toggle.classList.contains('text-accent-700')).toBe(true);
-    expect(toggle.classList.contains('text-neutral-500')).toBe(false);
+    expect(toggle.className).toBe(before);
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
   });
 
   it('persists the choice', () => {

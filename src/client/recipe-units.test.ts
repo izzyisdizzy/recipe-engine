@@ -31,9 +31,9 @@ const throwingStorage = (): Storage =>
 /** The segmented control, as components/UnitsToggle.astro renders it — note: no id. */
 function toggleMarkup(label: string): string {
   return (
-    `<div data-units-toggle role="group" aria-label="${label}">` +
-    `<button type="button" data-units-btn="us" class="text-neutral-500 dark:text-neutral-400">US</button>` +
-    `<button type="button" data-units-btn="grams" class="text-neutral-500 dark:text-neutral-400">Grams</button>` +
+    `<div data-units-toggle class="dz-seg" role="group" aria-label="${label}">` +
+    `<button type="button" data-units-btn="us" class="dz-seg__btn">US</button>` +
+    `<button type="button" data-units-btn="grams" class="dz-seg__btn">Grams</button>` +
     `</div>`
   );
 }
@@ -85,14 +85,30 @@ describe('initUnitsToggle', () => {
     for (const b of grams) expect(b.getAttribute('aria-pressed')).toBe('false');
   });
 
-  it('carries the active classes across every instance', () => {
+  it('never touches classes — the pressed look is CSS keyed on aria-pressed', () => {
     const { grams, us } = setup();
     grams[0].click();
-    for (const b of grams) {
-      expect(b.classList.contains('bg-accent-50')).toBe(true);
-      expect(b.classList.contains('text-neutral-500')).toBe(false);
-    }
-    for (const b of us) expect(b.classList.contains('text-neutral-500')).toBe(true);
+    for (const b of [...grams, ...us]) expect(b.className).toBe('dz-seg__btn');
+  });
+
+  it('moves and selects with the arrow keys, wrapping within one control', () => {
+    const { us, grams, list } = setup();
+    us[0].focus();
+    us[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(document.activeElement).toBe(grams[0]); // stays inside the first control
+    expect(list!.dataset.units).toBe('grams');
+    for (const b of grams) expect(b.getAttribute('aria-pressed')).toBe('true'); // both instances follow
+    expect(localStorage.getItem(UNITS_KEY)).toBe('grams');
+
+    grams[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(document.activeElement).toBe(us[0]); // wraps
+    expect(list!.dataset.units).toBe('us');
+  });
+
+  it('ignores keys other than Left/Right', () => {
+    const { us, list } = setup();
+    us[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    expect(list!.dataset.units).toBe('us');
   });
 
   it('reflects the stored mode on load, in both renderings', () => {

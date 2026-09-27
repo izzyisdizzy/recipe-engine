@@ -1,8 +1,9 @@
 ---
 /**
- * One row of a recipe index: thumbnail, title, category, and an optional edit link. The
- * wrapper carries `data-recipe-card`, `data-category` and a folded `data-search` string so the
- * index page's own script can filter rows without re-deriving anything.
+ * One row of a recipe index — a Dizzy `.dz-row`: title, category, and an optional edit link
+ * (plus a thumbnail only if the recipe has an image; recipes normally don't). The wrapper
+ * carries `data-recipe-card`, `data-category` and a folded `data-search` string so the index
+ * page's own script can filter rows without re-deriving anything.
  */
 import { Image } from 'astro:assets';
 import type { RecipeEntry } from '../schema';
@@ -19,14 +20,18 @@ interface Props {
 const { recipe, href = `/recipes/${recipe.id}/`, editHref } = Astro.props;
 const { title, category, keywords, tools, ingredients, steps, image } = recipe.data;
 
-// Everything a keyword search should match against, folded into one lowercase string.
+// Everything a keyword search should match against, folded into one lowercase string. Step
+// text is searched with any [[key|label]] brackets reduced to what the reader sees.
 const searchText = [
   title,
   category,
   ...keywords,
   ...tools,
   ...ingredients.flatMap((group) => [group.group ?? '', ...group.items.map(ingredientLabel)]),
-  ...steps.flatMap((group) => [group.group ?? '', ...group.items]),
+  ...steps.flatMap((group) => [
+    group.group ?? '',
+    ...group.items.map((step) => step.replace(/\[\[\s*([^\]|]+?)\s*(?:\|\s*([^\]]+?)\s*)?\]\]/g, (_, key, label) => label ?? key.replace(/-/g, ' '))),
+  ]),
 ]
   .join(' ')
   .toLowerCase();
@@ -34,32 +39,13 @@ const searchText = [
 
 <!-- Wrapper (not the link) carries the search/filter data attributes so the index can hide the
      whole row — main link + edit link — as one unit. Anchors can't nest, hence the split. -->
-<div
-  data-recipe-card
-  data-category={category}
-  data-search={searchText}
-  class="group flex items-center gap-2 border-b border-neutral-200 transition-colors hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-900"
->
-  <a href={href} class="flex min-w-0 flex-1 items-center gap-4 py-3">
-    {image && (
-      <div class="h-14 w-14 shrink-0 overflow-hidden rounded-lg">
-        <Image src={image} alt={title} class="h-full w-full object-cover" width={112} height={112} />
-      </div>
-    )}
-    <div class="min-w-0 flex-1">
-      <h3 class="truncate font-medium text-neutral-900 group-hover:text-accent-600 dark:text-neutral-100 dark:group-hover:text-accent-100">
-        {title}
-      </h3>
-    </div>
-    <p class="shrink-0 text-sm capitalize text-neutral-500 dark:text-neutral-500">{category}</p>
+<div data-recipe-card data-category={category} data-search={searchText} class="rx-card">
+  <a href={href} class="dz-row rx-card__link">
+    {image && <Image src={image} alt="" class="dz-row__thumb" width={112} height={112} />}
+    <h3 class="dz-row__title">{title}</h3>
+    <span class="dz-row__meta">{category}</span>
   </a>
   {editHref && (
-    <a
-      href={editHref}
-      aria-label={`Edit ${title}`}
-      class="auth-only shrink-0 rounded px-2 py-1 text-sm text-neutral-300 hover:text-accent-600 dark:text-neutral-600 dark:hover:text-accent-100"
-    >
-      ✎
-    </a>
+    <a href={editHref} aria-label={`Edit ${title}`} class="auth-only rx-card__edit">✎</a>
   )}
 </div>
