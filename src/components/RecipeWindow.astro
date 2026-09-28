@@ -1,0 +1,28 @@
+---
+/**
+ * One recipe section framed as a Dizzy window: a bar with the three lights and a file-name title
+ * (`ingredients.txt`), then a body holding the section. Internal to `Recipe.astro`; it frames a
+ * section inside the recipe's <article>, not the page.
+ *
+ * The section is named by the <h2> the caller puts first in the body (`labelledby` is its id), so
+ * the bar title is decorative and kept out of the accessibility tree.
+ */
+interface Props {
+  /** The bar's file name, e.g. `steps.txt`. */
+  title: string;
+  /** Id of the section's <h2>, for aria-labelledby. */
+  labelledby: string;
+}
+
+const { title, labelledby } = Astro.props;
+---
+
+<section class="dz-window rx-window" aria-labelledby={labelledby}>
+  <div class="dz-window__bar">
+    <span class="dz-window__lights" aria-hidden="true"><span class="dz-window__light"></span><span class="dz-window__light"></span><span class="dz-window__light"></span></span>
+    <span class="dz-window__title" aria-hidden="true">{title}</span>
+  </div>
+  <div class="dz-window__body">
+    <slot />
+  </div>
+</section>

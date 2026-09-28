@@ -6,11 +6,15 @@
  * Dizzy window (`dz-window`, titled like a file: ingredients.txt, steps.txt, ...) whose heading and
  * toggles form the first row of the window body; the bar carries only the lights and file name.
  *
+ * The title's `data-dz-bounce="once"` (one wave on load, then on hover) relies on izzybennett.com's
+ * patched Dizzy bundle.js; stock Dizzy reads an unknown trigger as a continuous bounce.
+ *
  * Styled by Dizzy: the site must load Dizzy's tokens and `bundle.css` (the `dz-*` classes), and
  * import `@izzy/recipe-engine/styles/recipes.css` into its Tailwind entry stylesheet (the
  * `.rx-*` / `.ing-*` rules, and the @source registration for this package).
  */
 import UnitsToggle from './UnitsToggle.astro';
+import RecipeWindow from './RecipeWindow.astro';
 import type { RecipeEntry } from '../schema';
 import { toGrams, formatGrams, withDetail, type Densities } from '../units';
 import { buildIngredientIndex, createLinkState, linkStep, type StructuredItem } from '../ingredients';
@@ -108,99 +112,75 @@ const anyStepAmounts = anyConvertible && linkState.n > 0;
   </header>
 
   {tools.length > 0 && (
-    <section class="dz-window rx-window rx-section" aria-labelledby="rx-tools">
-      <div class="dz-window__bar">
-        <span class="dz-window__lights" aria-hidden="true"><span class="dz-window__light"></span><span class="dz-window__light"></span><span class="dz-window__light"></span></span>
-        <span class="dz-window__title">tools.txt</span>
+    <RecipeWindow title="tools.txt" labelledby="rx-tools">
+      <div class="rx-section__head">
+        <h2 id="rx-tools" class="rx-h2">Tools</h2>
       </div>
-      <div class="dz-window__body rx-window__body">
-        <div class="rx-section__head">
-          <h2 id="rx-tools" class="rx-h2">Tools</h2>
-        </div>
-        <ul class="rx-tools">
-          {tools.map((tool) => <li class="dz-tag">{tool}</li>)}
-        </ul>
-      </div>
-    </section>
+      <ul class="rx-tools">
+        {tools.map((tool) => <li class="dz-tag">{tool}</li>)}
+      </ul>
+    </RecipeWindow>
   )}
 
-  <section class="dz-window rx-window rx-section" aria-labelledby="rx-ingredients">
-    <div class="dz-window__bar">
-      <span class="dz-window__lights" aria-hidden="true"><span class="dz-window__light"></span><span class="dz-window__light"></span><span class="dz-window__light"></span></span>
-      <span class="dz-window__title">ingredients.txt</span>
+  <RecipeWindow title="ingredients.txt" labelledby="rx-ingredients">
+    <div class="rx-section__head">
+      <h2 id="rx-ingredients" class="rx-h2">Ingredients</h2>
+      {anyConvertible && <UnitsToggle />}
     </div>
-    <div class="dz-window__body rx-window__body">
-      <div class="rx-section__head">
-        <h2 id="rx-ingredients" class="rx-h2">Ingredients</h2>
-        {anyConvertible && <UnitsToggle />}
-      </div>
-      <div id="ingredients-list" class="rx-ingredients" data-units="us">
-        {ingredientGroups.map((group) => (
-          <div>
-            {group.group && <h3 class="rx-h3">{group.group}</h3>}
-            <ul class="rx-ing-list">
-              {group.items.map((item) => (
-                <li class:list={['rx-ing', { 'is-convertible': item.grams !== null }]}>
-                  {item.us && <span class="rx-amt ing-us">{item.us}</span>}
-                  {item.grams !== null && <span class="rx-amt ing-grams">{item.grams}</span>}
-                  <span class="rx-ing__name">{item.name}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
-    </div>
-  </section>
-
-  <section class="dz-window rx-window rx-section" aria-labelledby="rx-steps">
-    <div class="dz-window__bar">
-      <span class="dz-window__lights" aria-hidden="true"><span class="dz-window__light"></span><span class="dz-window__light"></span><span class="dz-window__light"></span></span>
-      <span class="dz-window__title">steps.txt</span>
-    </div>
-    <div class="dz-window__body rx-window__body">
-      <div class="rx-section__head">
-        <h2 id="rx-steps" class="rx-h2">Steps</h2>
-        <div class="rx-section__tools">
-          {hasInlineAmounts && (
-            <button type="button" id="amounts-toggle" aria-pressed="false" class="dz-btn dz-btn--ghost dz-btn--sm rx-amounts-btn">
-              Show amounts
-            </button>
-          )}
-          {anyStepAmounts && <UnitsToggle label="Ingredient units in steps" />}
-        </div>
-      </div>
-      {stepGroups.map((group) => (
-        <div class="rx-step-group">
+    <div id="ingredients-list" class="rx-ingredients" data-units="us">
+      {ingredientGroups.map((group) => (
+        <div>
           {group.group && <h3 class="rx-h3">{group.group}</h3>}
-          <ol class="rx-steps">
-            {group.items.map((html, i) => (
-              <li class="rx-step">
-                <span class="rx-step__num" aria-hidden="true">{i + 1}</span>
-                <span class="rx-step__text" set:html={html} />
+          <ul class="rx-ing-list">
+            {group.items.map((item) => (
+              <li class:list={['rx-ing', { 'is-convertible': item.grams !== null }]}>
+                {item.us && <span class="rx-amt ing-us">{item.us}</span>}
+                {item.grams !== null && <span class="rx-amt ing-grams">{item.grams}</span>}
+                <span class="rx-ing__name">{item.name}</span>
               </li>
             ))}
-          </ol>
+          </ul>
         </div>
       ))}
     </div>
-  </section>
+  </RecipeWindow>
+
+  <RecipeWindow title="steps.txt" labelledby="rx-steps">
+    <div class="rx-section__head">
+      <h2 id="rx-steps" class="rx-h2">Steps</h2>
+      <div class="rx-section__tools">
+        {hasInlineAmounts && (
+          <button type="button" id="amounts-toggle" aria-pressed="false" class="dz-btn dz-btn--ghost dz-btn--sm rx-amounts-btn">
+            Show amounts
+          </button>
+        )}
+        {anyStepAmounts && <UnitsToggle label="Ingredient units in steps" />}
+      </div>
+    </div>
+    {stepGroups.map((group) => (
+      <div class="rx-step-group">
+        {group.group && <h3 class="rx-h3">{group.group}</h3>}
+        <ol class="rx-steps">
+          {group.items.map((html, i) => (
+            <li class="rx-step">
+              <span class="rx-step__num" aria-hidden="true">{i + 1}</span>
+              <span class="rx-step__text" set:html={html} />
+            </li>
+          ))}
+        </ol>
+      </div>
+    ))}
+  </RecipeWindow>
 
   {notes.length > 0 && (
-    <section class="dz-window rx-window rx-section" aria-labelledby="rx-notes">
-      <div class="dz-window__bar">
-        <span class="dz-window__lights" aria-hidden="true"><span class="dz-window__light"></span><span class="dz-window__light"></span><span class="dz-window__light"></span></span>
-        <span class="dz-window__title">notes.txt</span>
+    <RecipeWindow title="notes.txt" labelledby="rx-notes">
+      <div class="rx-section__head">
+        <h2 id="rx-notes" class="rx-h2">Notes</h2>
       </div>
-      <div class="dz-window__body rx-window__body">
-        <div class="rx-section__head">
-          <h2 id="rx-notes" class="rx-h2">Notes</h2>
-        </div>
-        <ul class="rx-notes">
-          {notes.map((note) => <li>{note}</li>)}
-        </ul>
-      </div>
-    </section>
+      <ul class="rx-notes">
+        {notes.map((note) => <li>{note}</li>)}
+      </ul>
+    </RecipeWindow>
   )}
 </article>
 

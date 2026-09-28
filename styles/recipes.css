@@ -7,8 +7,7 @@
  * v2 is built on the Dizzy design system. Every colour, font, radius, stroke and shadow below
  * is a Dizzy token custom property (--hotpink, --font-display, --radius-md, --shadow-soft, …)
  * and the components also use Dizzy's `dz-*` classes (dz-window, dz-tag, dz-seg, dz-btn, dz-row,
- * dz-link),
- * so the site must load Dizzy's tokens and bundle.css. A site without its own Dizzy tokens can
+ * dz-link), so the site must load Dizzy's tokens and bundle.css. A site without its own Dizzy tokens can
  * import `@izzy/recipe-engine/styles/theme.css` for defaults; it still needs bundle.css.
  *
  * Nothing here is keyed on prefers-color-scheme: the tokens change value per theme, so the
@@ -84,16 +83,14 @@
 }
 
 /* ---------------------------------------------------------------- windows */
-/* Each section is a Dizzy window stacked in one column. The bar and its title are left entirely
-   to Dizzy (and the site's retro chrome): this file is unlayered, so any bar rule here would beat
-   the site's layered styles outright.
+/* Each section is a Dizzy window stacked in one column. The bar's colours, stripes and title are
+   left to Dizzy (and the site's retro chrome): this file is unlayered, so any bar rule here beats
+   the site's layered styles outright. The only bar rule here is its top corner radius, below.
 
    Dizzy clips windows (overflow: hidden), but the ingredient popovers open upward from the step
    prose and would be cut off on the first line, so recipe windows let overflow show. The bar and
    body then round their own outer corners so nothing paints past the window's radius. */
-.rx-section { margin-top: var(--space-7); }
-
-.rx-window { overflow: visible; }
+.rx-window { margin-top: var(--space-7); overflow: visible; }
 .rx-window > .dz-window__bar {
   border-radius: calc(var(--radius-lg) - var(--stroke-2)) calc(var(--radius-lg) - var(--stroke-2)) 0 0;
 }
@@ -207,7 +204,9 @@
   font-weight: 700;
 }
 
-.rx-step__text { font-size: 18px; line-height: 29px; }
+/* min-width + overflow-wrap: the window no longer clips, so a long unbroken word (a URL) must
+   wrap instead of spilling past the frame. */
+.rx-step__text { min-width: 0; overflow-wrap: anywhere; font-size: 18px; line-height: 29px; }
 
 /* "Show amounts" / "Hide amounts": the ghost button, filled pink while pressed. */
 .rx-amounts-btn[aria-pressed='true'] {
@@ -228,6 +227,7 @@
   line-height: 26px;
   list-style: '✦  ';
 }
+.rx-notes li { overflow-wrap: anywhere; }
 .rx-notes li::marker { color: var(--aqua-deep); }
 
 /* ----------------------------------------------------- recipe index row */
