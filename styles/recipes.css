@@ -6,8 +6,8 @@
  *
  * v2 is built on the Dizzy design system. Every colour, font, radius, stroke and shadow below
  * is a Dizzy token custom property (--hotpink, --font-display, --radius-md, --shadow-soft, …)
- * and the components also use Dizzy's `dz-*` classes (dz-tag, dz-seg, dz-btn, dz-row, dz-link),
- * so the site must load Dizzy's tokens and bundle.css. A site without its own Dizzy tokens can
+ * and the components also use Dizzy's `dz-*` classes (dz-window, dz-tag, dz-seg, dz-btn, dz-row,
+ * dz-link), so the site must load Dizzy's tokens and bundle.css. A site without its own Dizzy tokens can
  * import `@izzy/recipe-engine/styles/theme.css` for defaults; it still needs bundle.css.
  *
  * Nothing here is keyed on prefers-color-scheme: the tokens change value per theme, so the
@@ -82,8 +82,23 @@
   color: var(--ink);
 }
 
-.rx-section { margin-top: var(--space-7); }
+/* ---------------------------------------------------------------- windows */
+/* Each section is a Dizzy window stacked in one column. The bar's colours, stripes and title are
+   left to Dizzy (and the site's retro chrome): this file is unlayered, so any bar rule here beats
+   the site's layered styles outright. The only bar rule here is its top corner radius, below.
 
+   Dizzy clips windows (overflow: hidden), but the ingredient popovers open upward from the step
+   prose and would be cut off on the first line, so recipe windows let overflow show. The bar and
+   body then round their own outer corners so nothing paints past the window's radius. */
+.rx-window { margin-top: var(--space-7); overflow: visible; }
+.rx-window > .dz-window__bar {
+  border-radius: calc(var(--radius-lg) - var(--stroke-2)) calc(var(--radius-lg) - var(--stroke-2)) 0 0;
+}
+.rx-window > .dz-window__body {
+  border-radius: 0 0 calc(var(--radius-lg) - var(--stroke-2)) calc(var(--radius-lg) - var(--stroke-2));
+}
+
+/* The section heading row: the first row of the window body, heading left, toggles right. */
 .rx-section__head {
   display: flex;
   flex-wrap: wrap;
@@ -91,7 +106,7 @@
   justify-content: space-between;
   gap: var(--space-3);
   padding-bottom: var(--space-3);
-  border-bottom: var(--stroke-1) solid var(--outline);
+  border-bottom: var(--stroke-hair) solid var(--hairline);
 }
 .rx-section__tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
 
@@ -187,33 +202,32 @@
   font-family: var(--font-mono);
   font-size: 13px;
   font-weight: 700;
-  box-shadow: var(--shadow-pressed);
 }
 
-.rx-step__text { font-size: 18px; line-height: 29px; }
+/* min-width + overflow-wrap: the window no longer clips, so a long unbroken word (a URL) must
+   wrap instead of spilling past the frame. */
+.rx-step__text { min-width: 0; overflow-wrap: anywhere; font-size: 18px; line-height: 29px; }
 
 /* "Show amounts" / "Hide amounts": the ghost button, filled pink while pressed. */
 .rx-amounts-btn[aria-pressed='true'] {
   --dz-btn-fill: var(--hotpink-soft);
   --dz-btn-fill-hover: var(--hotpink-soft);
-  box-shadow: var(--shadow-pressed);
 }
 
 /* ----------------------------------------------------------------- notes */
+/* The window is the frame, so the list itself carries no box of its own. */
 
 .rx-notes {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
   margin: var(--space-4) 0 0;
-  padding: var(--space-4) var(--space-4) var(--space-4) var(--space-7);
-  border: var(--stroke-1) solid var(--outline);
-  border-radius: var(--radius-sm);
-  background: var(--surface-sunken);
+  padding: 0 0 0 var(--space-6);
   font-size: 16px;
   line-height: 26px;
   list-style: '✦  ';
 }
+.rx-notes li { overflow-wrap: anywhere; }
 .rx-notes li::marker { color: var(--aqua-deep); }
 
 /* ----------------------------------------------------- recipe index row */

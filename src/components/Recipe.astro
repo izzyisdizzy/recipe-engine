@@ -2,13 +2,19 @@
 /**
  * A full recipe: title, meta, tools, ingredients (with the US ↔ grams toggle), linked steps
  * (popovers + "Show amounts"), and notes — as a bare <article>. It deliberately does not wrap
- * itself in a page layout; the consuming site supplies its own shell around it.
+ * itself in a page layout; the consuming site supplies its own shell around it. Each section is a
+ * Dizzy window (`dz-window`, titled like a file: ingredients.txt, steps.txt, ...) whose heading and
+ * toggles form the first row of the window body; the bar carries only the lights and file name.
+ *
+ * The title's `data-dz-bounce="once"` (one wave on load, then on hover) relies on izzybennett.com's
+ * patched Dizzy bundle.js; stock Dizzy reads an unknown trigger as a continuous bounce.
  *
  * Styled by Dizzy: the site must load Dizzy's tokens and `bundle.css` (the `dz-*` classes), and
  * import `@izzy/recipe-engine/styles/recipes.css` into its Tailwind entry stylesheet (the
  * `.rx-*` / `.ing-*` rules, and the @source registration for this package).
  */
 import UnitsToggle from './UnitsToggle.astro';
+import RecipeWindow from './RecipeWindow.astro';
 import type { RecipeEntry } from '../schema';
 import { toGrams, formatGrams, withDetail, type Densities } from '../units';
 import { buildIngredientIndex, createLinkState, linkStep, type StructuredItem } from '../ingredients';
@@ -89,7 +95,7 @@ const anyStepAmounts = anyConvertible && linkState.n > 0;
     <!-- The tag gets its own line: Dizzy's bouncify makes the title inline-block, which would
          otherwise flow it up beside the tag. -->
     <p class="rx-kicker"><span class="dz-tag dz-tag--pink">{category}</span></p>
-    <h1 class="rx-title" data-dz-bounce="hover">{title}</h1>
+    <h1 class="rx-title" data-dz-bounce="once">{title}</h1>
     {description && <p class="rx-lede">{description}</p>}
     {editHref && <a href={editHref} class="auth-only dz-link rx-edit">✎ Edit recipe</a>}
 
@@ -106,15 +112,17 @@ const anyStepAmounts = anyConvertible && linkState.n > 0;
   </header>
 
   {tools.length > 0 && (
-    <section class="rx-section" aria-labelledby="rx-tools">
-      <h2 id="rx-tools" class="rx-h2">Tools</h2>
+    <RecipeWindow title="tools.txt" labelledby="rx-tools">
+      <div class="rx-section__head">
+        <h2 id="rx-tools" class="rx-h2">Tools</h2>
+      </div>
       <ul class="rx-tools">
         {tools.map((tool) => <li class="dz-tag">{tool}</li>)}
       </ul>
-    </section>
+    </RecipeWindow>
   )}
 
-  <section class="rx-section" aria-labelledby="rx-ingredients">
+  <RecipeWindow title="ingredients.txt" labelledby="rx-ingredients">
     <div class="rx-section__head">
       <h2 id="rx-ingredients" class="rx-h2">Ingredients</h2>
       {anyConvertible && <UnitsToggle />}
@@ -135,9 +143,9 @@ const anyStepAmounts = anyConvertible && linkState.n > 0;
         </div>
       ))}
     </div>
-  </section>
+  </RecipeWindow>
 
-  <section class="rx-section" aria-labelledby="rx-steps">
+  <RecipeWindow title="steps.txt" labelledby="rx-steps">
     <div class="rx-section__head">
       <h2 id="rx-steps" class="rx-h2">Steps</h2>
       <div class="rx-section__tools">
@@ -162,15 +170,17 @@ const anyStepAmounts = anyConvertible && linkState.n > 0;
         </ol>
       </div>
     ))}
-  </section>
+  </RecipeWindow>
 
   {notes.length > 0 && (
-    <section class="rx-section" aria-labelledby="rx-notes">
-      <h2 id="rx-notes" class="rx-h2">Notes</h2>
+    <RecipeWindow title="notes.txt" labelledby="rx-notes">
+      <div class="rx-section__head">
+        <h2 id="rx-notes" class="rx-h2">Notes</h2>
+      </div>
       <ul class="rx-notes">
         {notes.map((note) => <li>{note}</li>)}
       </ul>
-    </section>
+    </RecipeWindow>
   )}
 </article>
 

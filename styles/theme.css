@@ -5,32 +5,41 @@
  *
  *   @import "@izzy/recipe-engine/styles/theme.css";
  *
- * It still needs Dizzy's bundle.css for the dz-* component classes. Values are Dizzy's
- * "daylight" theme, switching to "afterglow" with the OS. `:where()` keeps specificity at zero
- * so any site value wins.
+ * It still needs Dizzy's bundle.css for the dz-* component classes; the cocoa, aqua and
+ * sticker tokens below are there for its dz-window, which frames every recipe section. Values
+ * are Dizzy's "daylight" (sea glass) theme, switching to "afterglow" (neon purple) with the OS,
+ * hand-copied from izzybennett.com's src/dizzy/tokens.css. `:where()` keeps specificity at zero,
+ * so any unlayered site value wins; if your tokens live in a cascade layer, import this file into
+ * your lowest layer (e.g. `@import "…/theme.css" layer(base);`) or it will beat them.
  */
 :where(:root) {
-  --surface: #fff4e3; --surface-raised: #fffdf8; --surface-sunken: #ffe0c2;
-  --ink: #3b1d0e; --ink-muted: #7a4525; --hairline: #edcfae; --outline: #3b1d0e;
+  --surface: #ebf2f1; --surface-raised: #f8fbfb; --surface-sunken: #dce7e6;
+  --ink: #14302e; --ink-muted: #3f5f5c; --hairline: #d4e1e0; --outline: #14302e;
   --hotpink: #c60063; --hotpink-strong: #a80055; --hotpink-soft: #ffd9ec; --on-hotpink: #fff2f8;
-  --orange-deep: #9c3d00; --sunshine: #ffc93c; --on-sunshine: #3b1d0e;
-  --aqua-deep: #00697a; --focus: #00697a; --chrome-hi: #fffaf2; --chrome-lo: #d9b48c;
-  --shadow-pressed: 1px 1px 0 #3b1d0e; --shadow-soft: 0 10px 24px rgba(59, 29, 14, 0.18);
-  --font-display: "Baloo 2", "Trebuchet MS", Verdana, sans-serif;
-  --font-body: "Space Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --orange-deep: #9c3d00; --orange-soft: #d2ecea; --sunshine: #ffc93c; --on-sunshine: #14302e;
+  --aqua: #00a3b4; --aqua-deep: #00697a; --focus: #00697a; --chrome-hi: #ffffff; --chrome-lo: #b4c8c7;
+  --cocoa: #2f5a57; --cocoa-soft: #d9e5e4; --visited: #8a3ea8;
+  --shadow-pressed: 1px 1px 0 #14302e; --shadow-soft: 0 10px 24px rgba(20, 48, 46, 0.18);
+  --shadow-sticker: 4px 4px 0 #14302e; --shadow-sticker-lg: 7px 7px 0 #14302e;
+  --shadow-gel: inset 0 2px 0 #ffffffa6, inset 0 -4px 0 #0000001f;
+  --font-display: "Baloo 2 Variable", "Baloo 2", "Trebuchet MS", Verdana, sans-serif;
+  --font-body: "Space Grotesk Variable", "Space Grotesk", "Helvetica Neue", Arial, sans-serif;
   --font-mono: "Space Mono", "Courier New", ui-monospace, monospace;
   --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 24px; --space-6: 32px; --space-7: 48px;
-  --radius-xs: 6px; --radius-sm: 10px; --radius-md: 16px; --radius-pill: 999px;
-  --stroke-hair: 1px; --stroke-1: 2px; --stroke-2: 3px;
+  --radius-xs: 2px; --radius-sm: 3px; --radius-md: 4px; --radius-lg: 6px; --radius-pill: 999px;
+  --stroke-hair: 1px; --stroke-1: 3px; --stroke-2: 4px;
 }
 
 @media (prefers-color-scheme: dark) {
   :where(:root) {
-    --surface: #1b1210; --surface-raised: #2a1c17; --surface-sunken: #120b09;
-    --ink: #ffeede; --ink-muted: #d3a98d; --hairline: #43302a; --outline: #ffeede;
+    --surface: #1a0f2e; --surface-raised: #26174a; --surface-sunken: #110a20;
+    --ink: #f1e8ff; --ink-muted: #cbb6ee; --hairline: #3a2766; --outline: #eadbff;
     --hotpink: #ff5fae; --hotpink-strong: #ff8cc6; --hotpink-soft: #4d0f30; --on-hotpink: #2b0413;
-    --orange-deep: #ffb073; --sunshine: #ffd166; --on-sunshine: #2b1d00;
-    --aqua-deep: #7fe6f0; --focus: #5ee7f2; --chrome-hi: #55403a; --chrome-lo: #0e0906;
-    --shadow-pressed: 1px 1px 0 #0b0605; --shadow-soft: 0 12px 28px rgba(0, 0, 0, 0.55);
+    --orange-deep: #ffb073; --orange-soft: #3b2366; --sunshine: #ffd166; --on-sunshine: #2b1d00;
+    --aqua: #4fd8e6; --aqua-deep: #7fe6f0; --focus: #5ee7f2; --chrome-hi: #4b3585; --chrome-lo: #0b0616;
+    --cocoa: #b48cf0; --cocoa-soft: #2e1d58; --visited: #dda3f2;
+    --shadow-pressed: 1px 1px 0 #0b0616; --shadow-soft: 0 12px 28px rgba(11, 6, 22, 0.7);
+    --shadow-sticker: 4px 4px 0 #0b0616; --shadow-sticker-lg: 7px 7px 0 #0b0616;
+    --shadow-gel: inset 0 2px 0 #ffffff2e, inset 0 -4px 0 #00000047;
   }
 }

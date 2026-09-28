@@ -7,7 +7,7 @@ extracted as a package for Astro sites:
 | :-- | :-- |
 | `@izzy/recipe-engine/components/Recipe.astro` | A full recipe page body: meta (yield, prep, cook, oven), tools, ingredients with a US ↔ grams toggle, linked steps (`[[key]]` references + lexical matching) with popovers and "Show amounts", notes |
 | `@izzy/recipe-engine/components/RecipeCard.astro` | One searchable/filterable row for a recipe index |
-| `@izzy/recipe-engine/styles/recipes.css` | Styles for the popovers, inline amounts and the typeahead, plus Tailwind `@source` registration — **required** with the components |
+| `@izzy/recipe-engine/styles/recipes.css` | Styles for the recipe page (`.rx-*`, including the section windows), the popovers, inline amounts and the typeahead, plus Tailwind `@source` registration — **required** with the components |
 | `@izzy/recipe-engine/styles/theme.css` | Default Dizzy token values, for sites that don't define the Dizzy tokens themselves |
 | `@izzy/recipe-engine/schema` | `recipeSchema` (a content-collection schema factory), `categoryValues`, and the `RecipeEntry` / `RecipeData` types |
 | `@izzy/recipe-engine/units` | Quantity parsing and US-volume → grams conversion against a density table |
@@ -23,7 +23,7 @@ extracted as a package for Astro sites:
 No registry — pin by git tag:
 
 ```json
-"@izzy/recipe-engine": "github:izzyisdizzy/recipe-engine#v1.2.0"
+"@izzy/recipe-engine": "github:izzyisdizzy/recipe-engine#v2.1.0"
 ```
 
 The package ships raw TypeScript and `.astro`. `astro` is a peer dependency and the package
@@ -74,8 +74,12 @@ signed in), or omit `editHref`.
 
 **Styling.** v2 renders on the [Dizzy](https://izzybennett.com/projects/this-site/) design system.
 `recipes.css` reads only Dizzy token custom properties (`--hotpink`, `--font-display`,
-`--radius-md`, …) and the components use Dizzy's `dz-*` classes (`dz-tag`, `dz-seg`, `dz-btn`,
-`dz-row`, `dz-link`), so a consuming site must load Dizzy's tokens **and** its `bundle.css`.
+`--radius-md`, …) and the components use Dizzy's `dz-*` classes (`dz-window`, `dz-tag`, `dz-seg`,
+`dz-btn`, `dz-row`, `dz-link`), so a consuming site must load Dizzy's tokens **and** its `bundle.css`.
+Since v2.1.0 each recipe section (tools, ingredients, steps, notes) renders as a Dizzy window
+titled like a file (`ingredients.txt`, …), with its heading and toggles as the first body row;
+`theme.css` supplies the window tokens (`--cocoa`, `--aqua`, `--shadow-sticker-lg`) for sites
+without their own.
 Nothing is keyed on `prefers-color-scheme`: the recipe follows whichever theme the site shows.
 The client scripts only set `aria-pressed`; all pressed styling is CSS.
 
