@@ -38,7 +38,7 @@ const searchText = [
 ---
 
 <!-- Wrapper (not the link) carries the search/filter data attributes so the index can hide the
-     whole row — main link + edit link — as one unit. Anchors can't nest, hence the split. -->
+     whole row (main link and edit link) as one unit. Anchors can't nest, hence the split. -->
 <div data-recipe-card data-category={category} data-search={searchText} class="rx-card">
   <a href={href} class="dz-row rx-card__link">
     {image && <Image src={image} alt="" class="dz-row__thumb" width={112} height={112} />}
