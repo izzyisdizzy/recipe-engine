@@ -1,6 +1,6 @@
 {
   "name": "@izzy/recipe-engine",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Recipes for Astro sites on the Dizzy design system: content schema, US-to-grams conversion, ingredient/step linking with [[key]] references, the recipe page + index row components, and an ingredient-name typeahead.",
   "type": "module",
   "repository": "github:izzyisdizzy/recipe-engine",

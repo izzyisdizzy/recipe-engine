@@ -208,8 +208,14 @@ describe('grams rendering', () => {
     const idx = buildIngredientIndex(cookies, gramsOf);
     const html = linkIngredientsInHtml('mix the flour', idx, { n: 0 });
     expect(html).toContain('<span class="ing-amt ing-conv">');
-    expect(html).toContain('<span class="ing-us">1 ½ cup</span>');
+    expect(html).toContain('<span class="ing-us">1 <span class="ing-frac">½</span> cup</span>');
     expect(html).toContain('<span class="ing-grams">227 g</span>');
+  });
+
+  it('wraps each Unicode fraction glyph so it can be drawn full-size, leaving digits alone', () => {
+    const html = linkIngredientsInHtml('mix the flour', buildIngredientIndex(cookies), { n: 0 });
+    expect(html).toContain('<span class="ing-us">1 <span class="ing-frac">½</span> cup</span>');
+    expect(html).not.toMatch(/<span class="ing-frac">[^½]/);
   });
 
   it('omits grams (and the convertible flag) for a count-only amount', () => {
@@ -330,14 +336,14 @@ describe('inline amounts', () => {
     const html = render('mix in the butter', cookies);
     expect(html).toContain('class="ing-ref ing-has-amt"');
     expect(html).toContain(
-      '<span class="ing-inline" aria-hidden="true"><span class="ing-amt"><span class="ing-us">½ cup</span></span> </span><button'
+      '<span class="ing-inline" aria-hidden="true"><span class="ing-amt"><span class="ing-us"><span class="ing-frac">½</span> cup</span></span> </span><button'
     );
   });
 
   it('carries both units in the inline copy when convertible', () => {
     const html = linkIngredientsInHtml('mix the flour', buildIngredientIndex(cookies, gramsOf), createLinkState());
     expect(html).toContain(
-      '<span class="ing-inline" aria-hidden="true"><span class="ing-amt ing-conv"><span class="ing-us">1 ½ cup</span><span class="ing-grams">227 g</span></span> </span>'
+      '<span class="ing-inline" aria-hidden="true"><span class="ing-amt ing-conv"><span class="ing-us">1 <span class="ing-frac">½</span> cup</span><span class="ing-grams">227 g</span></span> </span>'
     );
   });
 
@@ -471,7 +477,7 @@ describe('ambiguity guard', () => {
   it('still links it, so the popover keeps showing the resolved amount', () => {
     const html = render('Combine flour and salt', twoFlours);
     expect(html).toContain('class="ing-ref"');
-    expect(html).toContain('¼ cup');
+    expect(html).toContain('<span class="ing-frac">¼</span> cup');
   });
 
   it('leaves the ambiguous mention\'s slot open for the qualified one', () => {
@@ -555,7 +561,7 @@ describe('[[key]] references', () => {
   it('links an explicit key and uses a display label when given', () => {
     const html = step('Whisk in the [[glaze-lemon|lemon juice]].');
     expect(html).toContain('>lemon juice</button>');
-    expect(html).toContain('1 ½ tbsp');
+    expect(html).toContain('1 <span class="ing-frac">½</span> tbsp');
     expect(html).not.toContain('[[');
   });
 

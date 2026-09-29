@@ -294,8 +294,8 @@
   background: var(--surface-raised);
   color: var(--ink);
   font-family: var(--font-mono);
-  font-size: 13px;
-  line-height: 20px;
+  font-size: 16px;
+  line-height: 24px;
   font-weight: 700;
   text-align: left;
   white-space: nowrap;
@@ -326,6 +326,11 @@
 .ing-amt .ing-grams { display: none; }
 :root[data-units='grams'] .ing-amt.ing-conv .ing-us { display: none; }
 :root[data-units='grams'] .ing-amt.ing-conv .ing-grams { display: inline; }
+
+/* Space Mono draws Unicode fraction glyphs (½, ¼) at a fraction of its digit height, so an
+   amount like "¼ cup" is hard to read. src/ingredients.ts wraps each glyph in `.ing-frac`;
+   the body face draws them full-size. */
+.ing-amt .ing-frac { font-family: var(--font-body); }
 
 /* Inline amounts mode. A mention that resolved to exactly one measurement, is the first of its
    ingredient, and isn't already quantified in the prose bakes a second copy of its amount before
