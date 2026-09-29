@@ -366,13 +366,17 @@ function resolve(index: IngredientIndex, matched: string): Entry[] {
   });
 }
 
+/** Wrap each Unicode fraction glyph ("½") so CSS can draw it in a face where it reads full-size. */
+const markFractions = (html: string): string =>
+  [...html].map((ch) => (ch in UNICODE_FRACTIONS ? `<span class="ing-frac">${ch}</span>` : ch)).join('');
+
 /**
  * The amount cell for one entry. Carries both US and (when known) grams text; which one
  * shows is driven by the page's `data-units` mode via CSS. A cell with a grams equivalent is
  * marked `.ing-conv` so grams mode can hide only its US text (count/unknown items stay US).
  */
 function amountHtml(e: Entry): string {
-  const us = `<span class="ing-us">${escapeHtml(e.us)}</span>`;
+  const us = `<span class="ing-us">${markFractions(escapeHtml(e.us))}</span>`;
   const grams = e.grams ? `<span class="ing-grams">${escapeHtml(e.grams)}</span>` : '';
   return `<span class="ing-amt${e.grams ? ' ing-conv' : ''}">${us}${grams}</span>`;
 }
