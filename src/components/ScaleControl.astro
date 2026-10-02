@@ -1,0 +1,29 @@
+---
+/**
+ * The recipe scale control (⅓ ½ 1× 2× 3×) — Dizzy's `.dz-seg`, styled entirely by
+ * `aria-pressed`. client/recipe-scale.ts drives every `[data-scale-btn]` on the page and
+ * rewrites the amounts; the page is baked at 1×, so that button starts pressed.
+ *
+ * Carries no `id` (instances are found via `[data-scale-control]`), like UnitsToggle. The
+ * `rx-scale` class exists only so recipes.css can hide the control when scripting is off.
+ */
+import { SCALE_FACTORS } from '../scale';
+
+interface Props {
+  label?: string;
+}
+
+const { label = 'Scale recipe' } = Astro.props;
+---
+
+<div data-scale-control class="dz-seg rx-scale" role="group" aria-label={label}>
+  {SCALE_FACTORS.map((f) => (
+    <button
+      type="button"
+      data-scale-btn={f.id}
+      class="dz-seg__btn"
+      aria-pressed={f.id === '1' ? 'true' : 'false'}
+      aria-label={f.name}
+    >{f.label}</button>
+  ))}
+</div>

@@ -172,6 +172,24 @@
 #ingredients-list[data-units='us'] .ing-grams { display: none; }
 #ingredients-list[data-units='grams'] .is-convertible .ing-us { display: none; }
 
+/* The scale control (client/recipe-scale.ts) needs script to do anything, so without it the
+   recipe is simply shown as written. */
+@media (scripting: none) {
+  .rx-scale { display: none; }
+}
+
+/* Scale notes. The status line under the Ingredients heading is empty at 1×; the one in Steps
+   shows only while scaled (`data-scale` on <html>), since amounts typed into the prose stay put. */
+.rx-scale-note {
+  margin: var(--space-3) 0 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink-muted);
+}
+.rx-scale-note:empty { display: none; }
+.rx-scale-note--steps { display: none; }
+:root[data-scale] .rx-scale-note--steps { display: block; }
+
 /* ----------------------------------------------------------------- steps */
 
 .rx-step-group + .rx-step-group { margin-top: var(--space-2); }

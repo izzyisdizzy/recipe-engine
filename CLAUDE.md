@@ -16,13 +16,13 @@ package instead of externalizing it.
 ### Layout
 
 - `src/schema.ts` — `recipeSchema`, `categoryValues`, `RecipeEntry`/`RecipeData` types.
-- `src/*.ts` — pure logic: `units`, `ingredients`, `markdown`, `ingredient-suggest`, plus the
+- `src/*.ts` — pure logic: `units`, `scale`, `ingredients`, `markdown`, `ingredient-suggest`, plus the
   client scripts `ingredient-typeahead` (takes the density table as a parameter) and
   `ingredient-popover` (both client-side, but they emit only hand-written `.ing-*` classes —
   never Tailwind utilities, since `src/` root is not scanned).
 - `src/client/` — client scripts that toggle **Tailwind utility classes**
-  (`recipe-units`, `recipe-amounts`).
-- `src/components/` — `Recipe.astro`, `RecipeCard.astro`, `UnitsToggle.astro`. Since v2 they
+  (`recipe-units`, `recipe-amounts`, `recipe-scale`).
+- `src/components/` — `Recipe.astro`, `RecipeCard.astro`, `UnitsToggle.astro`, `ScaleControl.astro`. Since v2 they
   render on Dizzy: `dz-*` classes plus the hand-written `.rx-*` rules in `styles/recipes.css`.
 - `styles/recipes.css` — hand-written `.ing-*` styles + the `@source` registration.
   `styles/theme.css` — default Dizzy token values for sites that don't define them.
@@ -62,6 +62,11 @@ on node 22. Pushing workflow files needs SSH (the gh HTTPS token lacks `workflow
   ambiguous key on purpose: a typo must not render silently. Keep the message listing valid keys.
 - **Storage keys are a contract.** `izzy-recipe-units` and `izzy-recipe-amounts` hold
   visitors' saved preferences; renaming one silently resets them.
+- **Scaling rewrites from data attributes, never from text.** Amounts carry `data-qty` /
+  `data-unit` / `data-grams` (and Serves `data-servings`) in all three renderings — list,
+  popover, inline copy; `client/recipe-scale.ts` recomputes from those. The scale is
+  deliberately not stored (a recipe always opens as written), and `scale.ts` never rounds:
+  ¼ × ⅓ is "1/12".
 - **Release = tag.** Bump `version`, tag `vX.Y.Z` on a commit that's on `main` (or will be
   kept by a non-squash merge), then bump the pin in izzybennett.com, whose `prebuild`
   clears the stale `.astro/` content cache.

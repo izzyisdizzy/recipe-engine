@@ -5,17 +5,18 @@ extracted as a package for Astro sites:
 
 | Export | What it does |
 | :-- | :-- |
-| `@izzy/recipe-engine/components/Recipe.astro` | A full recipe page body: meta (yield, prep, cook, oven), tools, ingredients with a US ↔ grams toggle, linked steps (`[[key]]` references + lexical matching) with popovers and "Show amounts", notes |
+| `@izzy/recipe-engine/components/Recipe.astro` | A full recipe page body: meta (yield, prep, cook, oven), tools, ingredients with a scale control (⅓ ½ 1× 2× 3×) and a US ↔ grams toggle, linked steps (`[[key]]` references + lexical matching) with popovers and "Show amounts", notes |
 | `@izzy/recipe-engine/components/RecipeCard.astro` | One searchable/filterable row for a recipe index |
 | `@izzy/recipe-engine/styles/recipes.css` | Styles for the recipe page (`.rx-*`, including the section windows), the popovers, inline amounts and the typeahead, plus Tailwind `@source` registration — **required** with the components |
 | `@izzy/recipe-engine/styles/theme.css` | Default Dizzy token values, for sites that don't define the Dizzy tokens themselves |
 | `@izzy/recipe-engine/schema` | `recipeSchema` (a content-collection schema factory), `categoryValues`, and the `RecipeEntry` / `RecipeData` types |
 | `@izzy/recipe-engine/units` | Quantity parsing and US-volume → grams conversion against a density table |
+| `@izzy/recipe-engine/scale` | Recipe scaling: `scaleQty("2 ¼", 2)` → `"4 ½"`, ranges included; exact fractions, no rounding |
 | `@izzy/recipe-engine/ingredients` | Links ingredient mentions in step HTML to their measurements |
 | `@izzy/recipe-engine/markdown` | Inline markdown rendering for steps and notes |
 | `@izzy/recipe-engine/ingredient-suggest` | Ranking for an ingredient-name typeahead |
 | `@izzy/recipe-engine/ingredient-typeahead` | The typeahead itself for an upload form: `initIngredientTypeahead(form, densities)` — ghost-text completion + listbox, styled by `recipes.css` |
-| `@izzy/recipe-engine/ingredient-popover`, `/recipe-units`, `/recipe-amounts` | The client scripts the `Recipe` component runs (exported for reuse/testing) |
+| `@izzy/recipe-engine/ingredient-popover`, `/recipe-units`, `/recipe-amounts`, `/recipe-scale` | The client scripts the `Recipe` component runs (exported for reuse/testing) |
 | `@izzy/recipe-engine/seed/densities.json` | A starter density table (grams per cup) |
 
 ## Install
@@ -23,7 +24,7 @@ extracted as a package for Astro sites:
 No registry — pin by git tag:
 
 ```json
-"@izzy/recipe-engine": "github:izzyisdizzy/recipe-engine#v2.1.0"
+"@izzy/recipe-engine": "github:izzyisdizzy/recipe-engine#v2.2.0"
 ```
 
 The package ships raw TypeScript and `.astro`. `astro` is a peer dependency and the package
@@ -108,6 +109,11 @@ steps:
   - items:
       - "Cut in the [[butter]], then add the [[lemon|lemon zest]]."
 ```
+
+**Scaling (v2.2.0).** The Ingredients header carries a ⅓ ½ 1× 2× 3× control that rescales the
+ingredient list, the step popovers and inline amounts, grams, and `servings`. Fractions stay
+exact (¼ × ⅓ shows "1/12"). Amounts typed straight into step prose and the freeform `yield` are
+not scaled, and the choice isn't stored — a recipe always opens as written.
 
 **Typeahead ghost alignment.** `.ing-ta-ghost` takes its padding and border width from
 `--ing-ta-ghost-padding` / `--ing-ta-ghost-border` (defaults `0.5rem 0.75rem` / `1px`). Set them

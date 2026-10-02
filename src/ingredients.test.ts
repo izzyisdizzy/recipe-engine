@@ -630,3 +630,55 @@ describe('[[key]] references', () => {
     );
   });
 });
+
+describe('scale data attributes', () => {
+  const gramsOf = (item: { unit?: string }) => (item.unit === 'cup' ? '227 g' : null);
+  const scale = { gramsOf: (item: { unit?: string }) => (item.unit === 'cup' ? 226.8 : null) };
+  const text = 'Mix the flour, then add the egg and more flour.';
+
+  it('emits none unless the index is built with scale data', () => {
+    const html = linkIngredientsInHtml(text, buildIngredientIndex(cookies, gramsOf), createLinkState());
+    expect(html).not.toContain('data-qty');
+    expect(html).not.toContain('data-unit');
+    expect(html).not.toContain('data-grams');
+  });
+
+  it('carries the raw qty, unit and unrounded grams, leaving the visible text as baked', () => {
+    const idx = buildIngredientIndex(cookies, gramsOf, [], scale);
+    const html = linkIngredientsInHtml('mix the flour', idx, { n: 0 });
+    expect(html).toContain(
+      '<span class="ing-us" data-qty="1 ½" data-unit="cup">1 <span class="ing-frac">½</span> cup</span>'
+    );
+    expect(html).toContain('<span class="ing-grams" data-grams="226.8">227 g</span>');
+  });
+
+  it('omits data-unit for a count item', () => {
+    const idx = buildIngredientIndex(cookies, gramsOf, [], scale);
+    const html = linkIngredientsInHtml('add the egg', idx, { n: 0 });
+    expect(html).toContain('<span class="ing-us" data-qty="1">1</span>');
+  });
+
+  it('marks a range as scalable and skips a quantity that is not a number', () => {
+    const groups: IngredientGroup[] = [
+      { items: [{ name: 'apples', qty: '6-8' }, { name: 'salt', qty: 'a pinch' }] },
+    ];
+    const idx = buildIngredientIndex(groups, undefined, [], {});
+    expect(linkIngredientsInHtml('core the apples', idx, { n: 0 })).toContain('data-qty="6-8"');
+    expect(linkIngredientsInHtml('add the salt', idx, { n: 0 })).not.toContain('data-qty');
+  });
+
+  it('puts the same attributes on the inline copy as on its popover', () => {
+    const idx = buildIngredientIndex(cookies, gramsOf, [], scale);
+    const html = linkIngredientsInHtml('mix the flour', idx, createLinkState());
+    expect(html).toContain('ing-inline');
+    expect(html.match(/data-qty="1 ½" data-unit="cup"/g)).toHaveLength(2);
+    expect(html.match(/data-grams="226.8"/g)).toHaveLength(2);
+  });
+
+  it('changes nothing but the attributes — same mentions, same inline choices', () => {
+    const strip = (html: string) => html.replace(/ data-(qty|unit|grams)="[^"]*"/g, '');
+    const plain = linkIngredientsInHtml(text, buildIngredientIndex(cookies, gramsOf), createLinkState());
+    const scaled = linkIngredientsInHtml(text, buildIngredientIndex(cookies, gramsOf, [], scale), createLinkState());
+    expect(strip(scaled)).toBe(plain);
+  });
+});
