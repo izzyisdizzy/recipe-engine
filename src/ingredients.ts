@@ -24,6 +24,7 @@
 
 import { UNICODE_FRACTIONS, UNIT_ALIASES } from './units';
 import { inlineMarkdown } from './markdown';
+import { isScalable } from './scale';
 
 export interface StructuredItem {
   name: string;
@@ -48,6 +49,20 @@ interface Entry {
   us: string;
   grams: string | null;
   group?: string;
+  /** Raw values for the scale control — set only when the index is built with `ScaleData`. */
+  qty?: string;
+  unit?: string;
+  gramsValue?: number | null;
+}
+
+/**
+ * Opt-in data for client-side scaling (client/recipe-scale.ts). Passing it makes every
+ * generated amount carry its authored quantity (`data-qty` / `data-unit`) and unrounded grams
+ * (`data-grams`) as attributes; the visible text is unchanged.
+ */
+export interface ScaleData {
+  /** Numeric grams for an item — scaled from this, not from the rounded label. */
+  gramsOf?: (item: StructuredItem) => number | null;
 }
 
 /** Entries reachable by a surface form, split by how precisely they matched it. */
@@ -275,7 +290,8 @@ function genericAliases(canonical: string): Set<string> {
 export function buildIngredientIndex(
   groups: IngredientGroup[],
   gramsOf?: (item: StructuredItem) => string | null,
-  avoidPhrases: string[] = []
+  avoidPhrases: string[] = [],
+  scale?: ScaleData
 ): IngredientIndex {
   const forms = new Map<string, FormEntries>();
 
@@ -295,6 +311,12 @@ export function buildIngredientIndex(
       const canonical = cleanName(item.name);
       const entry: Entry | null =
         us && canonical ? { name: canonical, us, grams: gramsOf ? gramsOf(item) : null, group: g.group } : null;
+      // An amount scales as a whole or not at all: no grams data for a quantity that can't scale.
+      if (entry && scale && isScalable(item.qty)) {
+        entry.qty = (item.qty ?? '').trim();
+        entry.unit = (item.unit ?? '').trim();
+        entry.gramsValue = scale.gramsOf ? scale.gramsOf(item) : null;
+      }
 
       // Every item is referenceable by key, measured or not, so a [[salt]] still resolves.
       const key = ingredientKey(item);
@@ -374,10 +396,16 @@ const markFractions = (html: string): string =>
  * The amount cell for one entry. Carries both US and (when known) grams text; which one
  * shows is driven by the page's `data-units` mode via CSS. A cell with a grams equivalent is
  * marked `.ing-conv` so grams mode can hide only its US text (count/unknown items stay US).
+ * An entry built with `ScaleData` also carries its raw values as data attributes.
  */
 function amountHtml(e: Entry): string {
-  const us = `<span class="ing-us">${markFractions(escapeHtml(e.us))}</span>`;
-  const grams = e.grams ? `<span class="ing-grams">${escapeHtml(e.grams)}</span>` : '';
+  const qtyAttrs =
+    e.qty === undefined
+      ? ''
+      : ` data-qty="${escapeHtml(e.qty)}"${e.unit ? ` data-unit="${escapeHtml(e.unit)}"` : ''}`;
+  const gramsAttr = e.gramsValue == null ? '' : ` data-grams="${e.gramsValue}"`;
+  const us = `<span class="ing-us"${qtyAttrs}>${markFractions(escapeHtml(e.us))}</span>`;
+  const grams = e.grams ? `<span class="ing-grams"${gramsAttr}>${escapeHtml(e.grams)}</span>` : '';
   return `<span class="ing-amt${e.grams ? ' ing-conv' : ''}">${us}${grams}</span>`;
 }
 

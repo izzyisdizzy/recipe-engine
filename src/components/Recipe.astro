@@ -1,6 +1,7 @@
 ---
 /**
- * A full recipe: title, meta, tools, ingredients (with the US ↔ grams toggle), linked steps
+ * A full recipe: title, meta, tools, ingredients (with the scale control and the US ↔ grams
+ * toggle), linked steps
  * (popovers + "Show amounts"), and notes — as a bare <article>. It deliberately does not wrap
  * itself in a page layout; the consuming site supplies its own shell around it. Each section is a
  * Dizzy window (`dz-window`, titled like a file: ingredients.txt, steps.txt, ...) whose heading and
@@ -14,10 +15,12 @@
  * `.rx-*` / `.ing-*` rules, and the @source registration for this package).
  */
 import UnitsToggle from './UnitsToggle.astro';
+import ScaleControl from './ScaleControl.astro';
 import RecipeWindow from './RecipeWindow.astro';
 import type { RecipeEntry } from '../schema';
 import { toGrams, formatGrams, withDetail, type Densities } from '../units';
 import { buildIngredientIndex, createLinkState, linkStep, type StructuredItem } from '../ingredients';
+import { isScalable } from '../scale';
 
 interface Props {
   recipe: RecipeEntry;
@@ -37,11 +40,11 @@ const oven = recipe.data.oven;
 
 const meta = [
   recipeYield && { label: 'Yield', value: recipeYield },
-  servings !== undefined && { label: 'Serves', value: String(servings) },
+  servings !== undefined && { label: 'Serves', value: String(servings), servings },
   prepTime !== undefined && { label: 'Prep', value: `${prepTime} min` },
   cookTime !== undefined && { label: 'Cook', value: `${cookTime} min` },
   oven && { label: 'Oven', value: oven },
-].filter((m): m is { label: string; value: string } => Boolean(m));
+].filter((m): m is { label: string; value: string; servings?: number } => Boolean(m));
 
 // An item's grams: its explicit override if it has one, else the density-table conversion.
 const gramsOf = (item: StructuredItem): number | null =>
@@ -49,18 +52,26 @@ const gramsOf = (item: StructuredItem): number | null =>
 
 // Precompute each ingredient's amount (US and, where convertible, grams) separately from its
 // name, so the amount can be set in mono. Items that can't be converted have grams === null
-// and always show the US text.
+// and always show the US text. A quantity the scale control can multiply also keeps its raw
+// qty/unit (and unrounded grams), emitted as data attributes for client/recipe-scale.ts.
 const ingredientGroups = ingredients.map((group) => ({
   group: group.group,
   items: group.items.map((item) => {
     const grams = gramsOf(item);
+    const qty = (item.qty ?? '').trim();
+    const unit = (item.unit ?? '').trim();
+    const scalable = isScalable(qty);
     return {
       name: withDetail(item.name, item.detail),
-      us: [item.qty, item.unit].filter(Boolean).join(' '),
+      us: [qty, unit].filter(Boolean).join(' '),
       grams: grams === null ? null : formatGrams(grams),
+      qty: scalable ? qty : undefined,
+      unit: scalable && unit ? unit : undefined,
+      gramsValue: scalable ? grams : null,
     };
   }),
 }));
+const anyScalable = ingredientGroups.some((group) => group.items.some((item) => item.qty !== undefined));
 const anyConvertible = ingredientGroups.some((group) => group.items.some((item) => item.grams !== null));
 
 // Index the recipe's ingredients so mentions in the step prose can be linked to their
@@ -72,7 +83,8 @@ const ingredientIndex = buildIngredientIndex(
     const grams = gramsOf(item);
     return grams === null ? null : formatGrams(grams);
   },
-  tools
+  tools,
+  { gramsOf }
 );
 // Link every step up front, in render order — `[[key]]` references explicitly, other prose
 // lexically. One state object threads the popover id counter, the set of ingredients that
@@ -104,7 +116,7 @@ const anyStepAmounts = anyConvertible && linkState.n > 0;
         {meta.map((m) => (
           <div>
             <dt>{m.label}</dt>
-            <dd>{m.value}</dd>
+            <dd data-servings={m.servings}>{m.value}</dd>
           </div>
         ))}
       </dl>
@@ -125,8 +137,12 @@ const anyStepAmounts = anyConvertible && linkState.n > 0;
   <RecipeWindow title="ingredients.txt" labelledby="rx-ingredients">
     <div class="rx-section__head">
       <h2 id="rx-ingredients" class="rx-h2">Ingredients</h2>
-      {anyConvertible && <UnitsToggle />}
+      <div class="rx-section__tools">
+        {anyScalable && <ScaleControl />}
+        {anyConvertible && <UnitsToggle />}
+      </div>
     </div>
+    {anyScalable && <p class="rx-scale-note" role="status" data-scale-status></p>}
     <div id="ingredients-list" class="rx-ingredients" data-units="us">
       {ingredientGroups.map((group) => (
         <div>
@@ -134,8 +150,8 @@ const anyStepAmounts = anyConvertible && linkState.n > 0;
           <ul class="rx-ing-list">
             {group.items.map((item) => (
               <li class:list={['rx-ing', { 'is-convertible': item.grams !== null }]}>
-                {item.us && <span class="rx-amt ing-us">{item.us}</span>}
-                {item.grams !== null && <span class="rx-amt ing-grams">{item.grams}</span>}
+                {item.us && <span class="rx-amt ing-us" data-qty={item.qty} data-unit={item.unit}>{item.us}</span>}
+                {item.grams !== null && <span class="rx-amt ing-grams" data-grams={item.gramsValue}>{item.grams}</span>}
                 <span class="rx-ing__name">{item.name}</span>
               </li>
             ))}
@@ -157,6 +173,9 @@ const anyStepAmounts = anyConvertible && linkState.n > 0;
         {anyStepAmounts && <UnitsToggle label="Ingredient units in steps" />}
       </div>
     </div>
+    {anyScalable && (
+      <p class="rx-scale-note rx-scale-note--steps">Amounts written into the step text aren't scaled.</p>
+    )}
     {stepGroups.map((group) => (
       <div class="rx-step-group">
         {group.group && <h3 class="rx-h3">{group.group}</h3>}
@@ -188,6 +207,7 @@ const anyStepAmounts = anyConvertible && linkState.n > 0;
   import { initIngredientPopovers } from '../ingredient-popover';
   import { initUnitsToggle } from '../client/recipe-units';
   import { initAmountsToggle } from '../client/recipe-amounts';
+  import { initRecipeScale } from '../client/recipe-scale';
 
   // Tap-toggle + dismissal for the ingredient-measurement popovers in the steps (hover/focus
   // are pure CSS; this only adds touch and Escape/outside-click behavior).
@@ -198,4 +218,7 @@ const anyStepAmounts = anyConvertible && linkState.n > 0;
 
   // "Show amounts" — move the step measurements from their popovers into the prose.
   initAmountsToggle();
+
+  // Scale control (⅓ ½ 1× 2× 3×) — rewrites every amount from its data attributes.
+  initRecipeScale();
 </script>
