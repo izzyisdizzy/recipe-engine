@@ -311,11 +311,10 @@ export function buildIngredientIndex(
       const canonical = cleanName(item.name);
       const entry: Entry | null =
         us && canonical ? { name: canonical, us, grams: gramsOf ? gramsOf(item) : null, group: g.group } : null;
-      if (entry && scale) {
-        if (isScalable(item.qty)) {
-          entry.qty = (item.qty ?? '').trim();
-          entry.unit = (item.unit ?? '').trim();
-        }
+      // An amount scales as a whole or not at all: no grams data for a quantity that can't scale.
+      if (entry && scale && isScalable(item.qty)) {
+        entry.qty = (item.qty ?? '').trim();
+        entry.unit = (item.unit ?? '').trim();
         entry.gramsValue = scale.gramsOf ? scale.gramsOf(item) : null;
       }
 

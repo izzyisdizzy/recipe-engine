@@ -67,7 +67,7 @@ const ingredientGroups = ingredients.map((group) => ({
       grams: grams === null ? null : formatGrams(grams),
       qty: scalable ? qty : undefined,
       unit: scalable && unit ? unit : undefined,
-      gramsValue: grams,
+      gramsValue: scalable ? grams : null,
     };
   }),
 }));

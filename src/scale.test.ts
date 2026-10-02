@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SCALE_FACTORS, parseAmount, formatQty, scaleQty, isScalable } from './scale';
+import { ORIGINAL_SCALE, SCALE_FACTORS, parseAmount, formatQty, scaleQty, isScalable } from './scale';
 import { UNICODE_FRACTIONS } from './units';
 
 // Every quantity shape the site's recipes actually use.
@@ -15,7 +15,7 @@ const CONTENT_QTYS = [
 describe('SCALE_FACTORS', () => {
   it('offers ⅓ ½ 1× 2× 3×, with the authored recipe as id "1"', () => {
     expect(SCALE_FACTORS.map((f) => f.id)).toEqual(['1/3', '1/2', '1', '2', '3']);
-    expect(SCALE_FACTORS.find((f) => f.id === '1')!.value).toBe(1);
+    expect(SCALE_FACTORS.find((f) => f.id === ORIGINAL_SCALE)!.value).toBe(1);
   });
 });
 
@@ -40,7 +40,7 @@ describe('parseAmount', () => {
     expect(parseAmount(qty)).toEqual(expected);
   });
 
-  it.each(['', '   ', undefined, null, 'a pinch', 'about 2', '0', '8-6', '2-2', '1-2-3', '1-1/2'])(
+  it.each(['', '   ', undefined, null, 'a pinch', 'about 2', '0', '8-6', '2-2', '1-2-3', '1-1/2', '1/0', '1-1/0', '-2'])(
     'returns null for %j',
     (qty) => {
       expect(parseAmount(qty)).toBeNull();
@@ -85,8 +85,23 @@ describe('formatQty', () => {
     expect(formatQty(3.0000001)).toBe('3');
   });
 
-  it('falls back to two decimals when no small fraction fits', () => {
+  it('keeps every glyph fraction exact at every factor', () => {
+    expect(formatQty((1 / 6) / 3)).toBe('1/18');
+    expect(formatQty((5 / 6) / 3)).toBe('5/18');
+    expect(formatQty((7 / 8) / 3)).toBe('7/24');
+    expect(formatQty((1 / 16) / 3)).toBe('1/48');
+    expect(formatQty((1 / 16) / 2)).toBe('1/32');
+  });
+
+  it('falls back to a short decimal when no small fraction fits', () => {
     expect(formatQty(1.37)).toBe('1.37');
+    expect(formatQty(0.66)).toBe('0.66');
+  });
+
+  it('never rounds a small value down to "0"', () => {
+    expect(formatQty(0.01 / 3)).toBe('0.0033');
+    expect(formatQty(0.005)).toBe('0.005');
+    expect(formatQty(1e-7)).toBe('');
   });
 
   it('returns an empty string for a non-positive or non-finite number', () => {
@@ -133,6 +148,16 @@ describe('scaleQty', () => {
     expect(scaleQty('1 to 2', 3)).toBe('3 to 6');
   });
 
+  it('keeps an authored "to" even when an end becomes a mixed number', () => {
+    expect(scaleQty('1 to 3', 1 / 2)).toBe('½ to 1 ½');
+  });
+
+  it('scales a decimal quantity without losing it', () => {
+    expect(scaleQty('0.5', 3)).toBe('1 ½');
+    expect(scaleQty('0.01', 1 / 3)).toBe('0.0033');
+    expect(scaleQty('0.01', 1 / 2)).toBe('0.005');
+  });
+
   it('spaces the dash when an end becomes a mixed number', () => {
     expect(scaleQty('2-3', 1 / 2)).toBe('1 – 1 ½');
     expect(scaleQty('5-6', 1 / 2)).toBe('2 ½ – 3');
@@ -142,6 +167,7 @@ describe('scaleQty', () => {
     expect(scaleQty('a pinch', 2)).toBe('a pinch');
     expect(scaleQty('', 2)).toBe('');
     expect(scaleQty('1-1/2', 2)).toBe('1-1/2');
+    expect(scaleQty('1/0', 2)).toBe('1/0');
   });
 
   it('round-trips: every content quantity at every factor parses back to the scaled value', () => {

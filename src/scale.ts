@@ -2,15 +2,16 @@
  * Recipe scaling — multiply an authored quantity string by a factor and write it back the way
  * an author would ("2 ¼" × 2 → "4 ½", "6-8" × ½ → "3-4").
  *
- * Quantities are freeform strings (see schema.ts), every one of them rational, and every scale
- * factor is rational too — so every product is exact. Nothing here rounds to a "nice" fraction:
- * ¼ × ⅓ is written "1/12", not snapped to ⅛ (which would be 50% off).
+ * Quantities are freeform strings (see schema.ts) and recipes write them as fractions, so a
+ * scaled quantity is a fraction too and is written exactly. Nothing here rounds to a "nice"
+ * fraction: ¼ × ⅓ is written "1/12", not snapped to ⅛ (which would be 50% off). Only a value
+ * that is no small fraction at all — a scaled decimal like "0.33" — is shown as a rounded decimal.
  *
  * Pure, and imports only `./units`, so the client script can pull it in without dragging the
  * markdown renderer along.
  */
 
-import { parseQty } from './units';
+import { UNICODE_FRACTIONS, parseQty } from './units';
 
 export interface ScaleFactor {
   /** Stable handle used in `data-scale-btn` / `data-scale`. */
@@ -18,17 +19,18 @@ export interface ScaleFactor {
   value: number;
   /** Short visible label ("½", "2×"). */
   label: string;
-  /** Spoken name — "⅓" on its own reads poorly in a screen reader. */
-  name: string;
 }
 
-/** The factors the scale control offers, smallest first. `'1'` is the authored recipe. */
+/** The id of the factor that is the recipe as authored. */
+export const ORIGINAL_SCALE = '1';
+
+/** The factors the scale control offers, smallest first. */
 export const SCALE_FACTORS: readonly ScaleFactor[] = [
-  { id: '1/3', value: 1 / 3, label: '⅓', name: 'One third' },
-  { id: '1/2', value: 1 / 2, label: '½', name: 'Half' },
-  { id: '1', value: 1, label: '1×', name: 'Original amounts' },
-  { id: '2', value: 2, label: '2×', name: 'Double' },
-  { id: '3', value: 3, label: '3×', name: 'Triple' },
+  { id: '1/3', value: 1 / 3, label: '⅓' },
+  { id: '1/2', value: 1 / 2, label: '½' },
+  { id: ORIGINAL_SCALE, value: 1, label: '1×' },
+  { id: '2', value: 2, label: '2×' },
+  { id: '3', value: 3, label: '3×' },
 ];
 
 /** A parsed quantity: one value, or a range with the separator the author used. */
@@ -51,14 +53,14 @@ export function parseAmount(qty: string | undefined | null): Amount | null {
   if (!s) return null;
 
   const scalar = parseQty(s);
-  if (scalar !== null) return scalar > 0 ? { lo: scalar } : null;
+  if (scalar !== null) return scalar > 0 && Number.isFinite(scalar) ? { lo: scalar } : null;
 
   // split() with a capture group yields [lo, separator, hi] for exactly one separator.
   const parts = s.split(RANGE_SEPARATOR);
   if (parts.length !== 3) return null;
   const lo = parseQty(parts[0]);
   const hi = parseQty(parts[2]);
-  if (lo === null || hi === null || !(lo > 0 && lo < hi)) return null;
+  if (lo === null || hi === null || !(lo > 0 && lo < hi) || !Number.isFinite(hi)) return null;
   return { lo, hi, sep: parts[1] };
 }
 
@@ -69,30 +71,37 @@ export function isScalable(qty: string | undefined | null): boolean {
 
 const EPSILON = 1e-6;
 
-/** Reduced proper fraction → its Unicode glyph. Every "k/d" over 2, 3, 4, 5, 6, 8 has one. */
-const FRACTION_GLYPHS: Record<string, string> = {
-  '1/2': '½',
-  '1/3': '⅓', '2/3': '⅔',
-  '1/4': '¼', '3/4': '¾',
-  '1/5': '⅕', '2/5': '⅖', '3/5': '⅗', '4/5': '⅘',
-  '1/6': '⅙', '5/6': '⅚',
-  '1/8': '⅛', '3/8': '⅜', '5/8': '⅝', '7/8': '⅞',
-};
+/**
+ * The largest denominator written as a fraction. 48 keeps every authored fraction exact at
+ * every factor (⅛ × ⅓ = 1/24, 1/16 × ⅓ = 1/48, ⅚ × ⅓ = 5/18) while leaving a scaled decimal
+ * ("0.33" × 2 = 33/50) to read as a decimal.
+ */
+const MAX_DENOMINATOR = 48;
 
-/** Denominators tried in order: the glyph ones first, then ones written as ASCII "k/d". */
-const DENOMINATORS = [2, 3, 4, 5, 6, 8, 9, 10, 12, 15, 16, 24];
+/** A proper fraction in lowest terms ("k/d"), or null if it isn't one over a small denominator. */
+function asFraction(frac: number): string | null {
+  // Smallest denominator first, so the first hit is already reduced.
+  for (let d = 2; d <= MAX_DENOMINATOR; d++) {
+    const k = Math.round(frac * d);
+    if (k > 0 && Math.abs(frac * d - k) < EPSILON) return `${k}/${d}`;
+  }
+  return null;
+}
 
-const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+/** Reduced fraction → its Unicode glyph, inverted from the table `parseQty` reads. */
+const FRACTION_GLYPHS: Record<string, string> = Object.fromEntries(
+  Object.entries(UNICODE_FRACTIONS).map(([glyph, value]) => [asFraction(value), glyph])
+);
 
 /**
  * Write a positive number as a recipe quantity: a whole number, a fraction, or a mixed number
  * with a space ("2 ¼"), matching how the recipes are authored. The fraction is exact — a glyph
  * where one exists, otherwise ASCII ("1/12", which `parseQty` still reads). A value that is no
- * small fraction at all falls back to two decimals. Returns '' for a non-positive or non-finite
- * number.
+ * small fraction at all is rounded to a short decimal. Returns '' for a number that is
+ * non-finite, non-positive, or too small to write.
  */
 export function formatQty(n: number): string {
-  if (!Number.isFinite(n) || n <= 0) return '';
+  if (!Number.isFinite(n) || n < EPSILON) return '';
 
   let whole = Math.floor(n);
   let frac = n - whole;
@@ -102,16 +111,14 @@ export function formatQty(n: number): string {
   }
   if (frac < EPSILON) return String(whole);
 
-  for (const d of DENOMINATORS) {
-    const k = Math.round(frac * d);
-    if (Math.abs(frac * d - k) >= EPSILON) continue;
-    const g = gcd(k, d);
-    const reduced = `${k / g}/${d / g}`;
-    const text = FRACTION_GLYPHS[reduced] ?? reduced;
+  const fraction = asFraction(frac);
+  if (fraction) {
+    const text = FRACTION_GLYPHS[fraction] ?? fraction;
     return whole > 0 ? `${whole} ${text}` : text;
   }
 
-  return String(Number(n.toFixed(2)));
+  // Two decimals, or two significant digits for a small value so it never rounds to "0".
+  return String(Number(n >= 0.1 ? n.toFixed(2) : n.toPrecision(2)));
 }
 
 /**
@@ -131,7 +138,8 @@ export function scaleQty(qty: string, factor: number): string {
   const hi = formatQty(amount.hi * factor);
   if (!hi) return qty;
   if (lo === hi) return lo;
+  if (/^to$/i.test(amount.sep ?? '')) return `${lo} to ${hi}`;
   // "1-1 ½" reads as a mixed number gone wrong; a spaced en dash keeps the two ends apart.
   if (lo.includes(' ') || hi.includes(' ')) return `${lo} – ${hi}`;
-  return /^to$/i.test(amount.sep ?? '') ? `${lo} to ${hi}` : `${lo}${amount.sep}${hi}`;
+  return `${lo}${amount.sep}${hi}`;
 }

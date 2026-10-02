@@ -682,3 +682,14 @@ describe('scale data attributes', () => {
     expect(strip(scaled)).toBe(plain);
   });
 });
+
+describe('scale data: all or nothing', () => {
+  it('carries no grams value for a quantity that cannot scale', () => {
+    const groups: IngredientGroup[] = [{ items: [{ name: 'herbs', qty: 'a few', unit: 'sprigs', grams: 30 }] }];
+    const idx = buildIngredientIndex(groups, () => '30 g', [], { gramsOf: (item) => item.grams ?? null });
+    const html = linkIngredientsInHtml('add the herbs', idx, { n: 0 });
+    expect(html).toContain('<span class="ing-grams">30 g</span>');
+    expect(html).not.toContain('data-grams');
+    expect(html).not.toContain('data-qty');
+  });
+});

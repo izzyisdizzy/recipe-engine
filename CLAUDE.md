@@ -21,7 +21,8 @@ package instead of externalizing it.
   `ingredient-popover` (both client-side, but they emit only hand-written `.ing-*` classes —
   never Tailwind utilities, since `src/` root is not scanned).
 - `src/client/` — client scripts that toggle **Tailwind utility classes**
-  (`recipe-units`, `recipe-amounts`, `recipe-scale`).
+  (`recipe-units`, `recipe-amounts`), plus `recipe-scale`, which toggles none — it rewrites
+  amount text.
 - `src/components/` — `Recipe.astro`, `RecipeCard.astro`, `UnitsToggle.astro`, `ScaleControl.astro`. Since v2 they
   render on Dizzy: `dz-*` classes plus the hand-written `.rx-*` rules in `styles/recipes.css`.
 - `styles/recipes.css` — hand-written `.ing-*` styles + the `@source` registration.
@@ -65,8 +66,9 @@ on node 22. Pushing workflow files needs SSH (the gh HTTPS token lacks `workflow
 - **Scaling rewrites from data attributes, never from text.** Amounts carry `data-qty` /
   `data-unit` / `data-grams` (and Serves `data-servings`) in all three renderings — list,
   popover, inline copy; `client/recipe-scale.ts` recomputes from those. The scale is
-  deliberately not stored (a recipe always opens as written), and `scale.ts` never rounds:
-  ¼ × ⅓ is "1/12".
+  deliberately not stored (a recipe always opens as written), and `scale.ts` never rounds a
+  fraction: ¼ × ⅓ is "1/12". An amount scales whole or not at all — no `data-grams` on a
+  quantity that can't be parsed.
 - **Release = tag.** Bump `version`, tag `vX.Y.Z` on a commit that's on `main` (or will be
   kept by a non-squash merge), then bump the pin in izzybennett.com, whose `prebuild`
   clears the stale `.astro/` content cache.
