@@ -47,10 +47,28 @@
   color: var(--ink-muted);
 }
 
+/* The header's action row: the (auth-gated) edit link and the print button. */
+.rx-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-4);
+  margin-top: var(--space-2);
+}
+
 .rx-edit {
   display: inline-block;
-  margin-top: var(--space-2);
   font-size: 14px;
+}
+
+/* A link-styled button: dz-link supplies the colour and underline, this undoes button chrome. */
+.rx-print {
+  font: inherit;
+  font-size: 14px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
 }
 
 /* The meta strip: a sunken, bevelled well of label / mono value pairs. */
@@ -377,6 +395,34 @@
 :root[data-amounts='inline'] .ing-has-amt > .ing-ref-btn:hover,
 :root[data-amounts='inline'] .ing-has-amt > .ing-ref-btn:focus-visible {
   color: inherit;
+}
+
+/* ----------------------------------------------------------------- print */
+
+/* Paper gets the recipe, not the controls. Whatever units, scale and inline amounts are showing
+   on screen are what print. The site supplies the rest (page chrome, window frames, daylight
+   colours). !important because the popover's :hover / [data-open] / inline-mode rules outrank
+   a plain selector. */
+@media print {
+  .rx-actions,
+  .rx-section__tools,
+  .rx-scale-note--steps,
+  .ing-pop { display: none !important; }
+
+  /* The mention's tap affordance means nothing on paper; keep the bold, drop the underline. */
+  .ing-ref-btn,
+  .ing-ref[data-open] > .ing-ref-btn {
+    background: none;
+    border-bottom: none;
+    color: inherit;
+  }
+
+  .rx-meta,
+  .rx-ing,
+  .rx-step { break-inside: avoid; }
+  .rx-h2,
+  .rx-h3,
+  .rx-section__head { break-after: avoid; }
 }
 
 /* ---------------------------------------------------- ingredient typeahead */

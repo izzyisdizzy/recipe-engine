@@ -31,9 +31,14 @@ interface Props {
    * class, so the site's own auth CSS decides when it's visible.
    */
   editHref?: string;
+  /**
+   * Show the "Print" button beside the edit link (default true). It opens the browser's print
+   * dialog; the `@media print` rules in styles/recipes.css strip the controls from the page.
+   */
+  printable?: boolean;
 }
 
-const { recipe, densities, editHref } = Astro.props;
+const { recipe, densities, editHref, printable = true } = Astro.props;
 const { title, description, category, prepTime, cookTime, servings, tools, ingredients, steps, notes } = recipe.data;
 const recipeYield = recipe.data.yield;
 const oven = recipe.data.oven;
@@ -109,7 +114,13 @@ const anyStepAmounts = anyConvertible && linkState.n > 0;
     <p class="rx-kicker"><span class="dz-tag dz-tag--pink">{category}</span></p>
     <h1 class="rx-title" data-dz-bounce="once">{title}</h1>
     {description && <p class="rx-lede">{description}</p>}
-    {editHref && <a href={editHref} class="auth-only dz-link rx-edit">✎ Edit recipe</a>}
+    {(editHref || printable) && (
+      <div class="rx-actions">
+        {editHref && <a href={editHref} class="auth-only dz-link rx-edit">✎ Edit recipe</a>}
+        <!-- Hidden until client/recipe-print.ts runs: without JavaScript it would do nothing. -->
+        {printable && <button type="button" class="dz-link rx-print" data-recipe-print hidden>⎙ Print</button>}
+      </div>
+    )}
 
     {meta.length > 0 && (
       <dl class="rx-meta">
@@ -208,6 +219,7 @@ const anyStepAmounts = anyConvertible && linkState.n > 0;
   import { initUnitsToggle } from '../client/recipe-units';
   import { initAmountsToggle } from '../client/recipe-amounts';
   import { initRecipeScale } from '../client/recipe-scale';
+  import { initRecipePrint } from '../client/recipe-print';
 
   // Tap-toggle + dismissal for the ingredient-measurement popovers in the steps (hover/focus
   // are pure CSS; this only adds touch and Escape/outside-click behavior).
@@ -221,4 +233,7 @@ const anyStepAmounts = anyConvertible && linkState.n > 0;
 
   // Scale control (⅓ ½ 1× 2× 3×) — rewrites every amount from its data attributes.
   initRecipeScale();
+
+  // "Print" — reveal the header button and open the print dialog on click.
+  initRecipePrint();
 </script>
