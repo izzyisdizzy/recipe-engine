@@ -61,9 +61,12 @@
   font-size: 14px;
 }
 
-/* A link-styled button: dz-link supplies the colour and underline, this undoes button chrome. */
+/* A link-styled button: dz-link supplies the colour, weight and underline, this undoes button
+   chrome. Not the `font` shorthand: this file is unlayered, so it would beat dz-link's
+   (layered) font-weight in the site and leave Print lighter than the edit link. */
 .rx-print {
-  font: inherit;
+  font-family: inherit;
+  line-height: inherit;
   font-size: 14px;
   background: none;
   border: none;
