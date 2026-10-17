@@ -400,13 +400,12 @@
 /* ----------------------------------------------------------------- print */
 
 /* Paper gets the recipe, not the controls. Whatever units, scale and inline amounts are showing
-   on screen are what print. The site supplies the rest (page chrome, window frames, daylight
-   colours). !important because the popover's :hover / [data-open] / inline-mode rules outrank
-   a plain selector. */
+   on screen are what print, and so do the scale notes, since prose amounts stay unscaled on paper
+   too. The site supplies the rest (page chrome, window frames, daylight colours). !important
+   because the popover's :hover / [data-open] / inline-mode rules outrank a plain selector. */
 @media print {
   .rx-actions,
   .rx-section__tools,
-  .rx-scale-note--steps,
   .ing-pop { display: none !important; }
 
   /* The mention's tap affordance means nothing on paper; keep the bold, drop the underline. */
