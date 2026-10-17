@@ -419,12 +419,34 @@
     color: inherit;
   }
 
+  /* The screen spacing frames each section as a window; on paper the frame is gone, so the
+     48px gap and the body inset would just leave blank space and indent the sections past the
+     title. */
+  .rx-window { margin-top: var(--space-5); }
+  .rx-window > .dz-window__body { padding: 0; }
+
+  /* Block flow, not the screen's flex column: WebKit (Safari's print) won't split a flex
+     container across pages, so it pushed the whole step list onto the next page and left the
+     Steps heading alone at the bottom of the previous one. */
+  .rx-steps { display: block; }
+  .rx-step + .rx-step { margin-top: var(--space-4); }
+
   .rx-meta,
   .rx-ing,
   .rx-step { break-inside: avoid; }
   .rx-h2,
   .rx-h3,
   .rx-section__head { break-after: avoid; }
+
+  /* WebKit ignores break-after: avoid, so a heading that lands at the foot of a page prints
+     alone there. Instead each heading's own box is made 4rem/3rem taller and unbreakable, with a
+     matching negative margin so nothing after it moves: if that taller box doesn't fit, the
+     heading moves to the next page with its first rows. The reserve sits on the heading rather
+     than the section head row, whose hairline border would be pushed down by it. Block, not
+     flex, so the row's only remaining child (its toggles are hidden) flows normally. */
+  .rx-section__head { display: block; }
+  .rx-h2 { break-inside: avoid; padding-bottom: 4rem; margin-bottom: -4rem; }
+  .rx-h3 { break-inside: avoid; padding-bottom: 3rem; margin-bottom: calc(var(--space-2) - 3rem); }
 }
 
 /* ---------------------------------------------------- ingredient typeahead */
