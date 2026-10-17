@@ -22,7 +22,7 @@ package instead of externalizing it.
   never Tailwind utilities, since `src/` root is not scanned).
 - `src/client/` — client scripts that toggle **Tailwind utility classes**
   (`recipe-units`, `recipe-amounts`), plus `recipe-scale`, which toggles none — it rewrites
-  amount text.
+  amount text — and `recipe-print`, which reveals the header's print button.
 - `src/components/` — `Recipe.astro`, `RecipeCard.astro`, `UnitsToggle.astro`, `ScaleControl.astro`. Since v2 they
   render on Dizzy: `dz-*` classes plus the hand-written `.rx-*` rules in `styles/recipes.css`.
 - `styles/recipes.css` — hand-written `.ing-*` styles + the `@source` registration.
